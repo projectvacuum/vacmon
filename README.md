@@ -1,2 +1,2 @@
 # vacmon
-Monitoring service for Vac and Vcycle
+State monitoring service for Vac and Vcycle

@@ -1,0 +1,185 @@
+#!/usr/bin/python
+#
+#  vacmond - Vac monitoring daemon 
+#
+#  Andrew McNab, University of Manchester.
+#  Copyright (c) 2013-5. All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or
+#  without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    o Redistributions of source code must retain the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer. 
+#    o Redistributions in binary form must reproduce the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials
+#      provided with the distribution. 
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+#  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+#  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+#  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+#  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+#  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+#  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+#  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+#  Contacts: Andrew.McNab@cern.ch  http://www.gridpp.ac.uk/vac/
+#
+
+import uuid
+import os, errno, sys
+import json
+import time
+import subprocess
+import socket
+import shutil
+import tempfile
+import hashlib
+import base64
+import stat
+import random
+
+import vacmon
+
+def vacmonListener():
+
+   si = file('/dev/null', 'r')
+   os.dup2(si.fileno(), sys.stdin.fileno())
+
+   so = file('/var/log/vacmond', 'a+')
+   os.dup2(so.fileno(), sys.stdout.fileno())
+          
+   se = file('/var/log/vacmond', 'a+', 0)
+   os.dup2(se.fileno(), sys.stderr.fileno())
+ 
+   vac.vacutils.createFile('/var/lib/vacmon/vacmond.pid', str(os.getpid()) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/var/lib/vacmon/tmp')
+
+   sock = None
+
+   vac.vacutils.logLine('vacmon listener starts')
+   
+   vac.shared.setProcessName('vacmond')
+
+   while True:
+   
+     try:
+       close(so)
+     except:
+       pass
+           
+     so = file('/var/log/vacmond', 'a+')
+     os.dup2(so.fileno(), sys.stdout.fileno())
+          
+     try:
+       close(se)
+     except:
+       pass
+
+     se = file('/var/log/vacmond', 'a+', 0)     
+     os.dup2(se.fileno(), sys.stderr.fileno())
+
+     if sock is None:
+       sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+       vac.shared.setSockBufferSize(sock)
+       sock.settimeout(60.0)
+
+       try:
+         sock.bind(('', 8884))
+       except Exception as e:
+         sock = None
+         vac.vacutils.logLine('Failed to bind to vacmond port 8884: ' + str(e))
+         time.sleep(60.0)
+         continue
+   
+     readConfError = vac.shared.readConf()
+
+     if readConfError:
+       vac.vacutils.logLine('Reading configuration fails with: ' + readConfError)
+       time.sleep(60.0)
+       continue
+          
+     try:
+       pr = open('/var/lib/vacmon/vacmond.pid', 'r')
+       pid = int(pr.read().strip())
+       pr.close()
+       
+       if pid != os.getpid():
+         vac.vacutils.logLine('os.getpid ' + os.getpid() + ' does not match vacmond.pid ' + pid + ' - exiting')
+         break
+                
+     except:
+       vac.vacutils.logLine('no responder.pid - exiting')
+       break
+
+     # so log file is updated before we start waiting        
+     sys.stdout.flush()
+     sys.stderr.flush()
+
+     # Update responder heartbeat file
+     vac.vacutils.createFile('/var/lib/vacmon/vacmond-heartbeat', str(int(time.time())) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/var/lib/vacmon/tmp')
+
+     try:
+       data, addr = sock.recvfrom(1024)
+     except socket.error as msg:
+       continue
+
+     try:
+       queryMessage = json.loads(data)
+     except:
+       continue
+     
+     if ('space'  in queryMessage and 
+         'cookie' in queryMessage and 
+         'method' in queryMessage and 
+         queryMessage['space']  == vac.shared.spaceName):
+          
+         vac.vacutils.logLine("Received " + data + " from " + str(addr))
+
+         if queryMessage['method'] == 'machines':
+           try:
+             for response in vac.shared.makeMachineResponses(queryMessage['cookie']):
+               sock.sendto(response, addr)
+           except:
+             pass
+ 
+         elif queryMessage['method'] == 'machinetypes':
+           try:
+             for response in vac.shared.makeVmtypeResponses(queryMessage['cookie']):
+               sock.sendto(response, addr)
+           except:
+             pass
+
+         elif queryMessage['method'] == 'factories':
+           try:
+             sock.sendto(vac.shared.makeFactoryResponse(queryMessage['cookie']), addr)
+           except:
+             pass
+
+   sys.exit(0) # if we break out of while loop then we exit
+
+#
+# PROGRAM MAIN !!!
+# 
+
+if __name__ == '__main__':
+
+    if (os.fork() != 0):
+      sys.exit() # first parent
+
+    os.chdir("/")
+    os.setsid()
+    os.umask(0) 
+
+    if os.fork() != 0:
+      sys.exit() # second parent
+
+    vacmonListener()
+          

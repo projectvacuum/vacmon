@@ -1,0 +1,6 @@
+/var/log/vacmond
+{
+  daily
+  missingok
+  rotate 3
+}

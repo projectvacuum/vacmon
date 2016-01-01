@@ -34,18 +34,13 @@
 #  Contacts: Andrew.McNab@cern.ch  http://www.gridpp.ac.uk/vac/
 #
 
-import uuid
-import os, errno, sys
+import os
+import errno
+import sys
 import json
 import time
-import subprocess
 import socket
-import shutil
-import tempfile
-import hashlib
-import base64
 import stat
-import random
 import pycurl
 
 import vacmon
@@ -145,9 +140,16 @@ def vacmonListener():
        continue
        
      if 'method' in message and message['method'] == 'factory':
-       processFactory(curl, jsonMessage)
+       try:
+         processFactory(curl, jsonMessage)
+       except:
+         pass
+
      elif 'method' in message and message['method'] == 'machinetype':
-       processMachinetype(curl, jsonMessage)
+       try:
+         processMachinetype(curl, jsonMessage)
+       except:
+         pass
           
    sys.exit(0) # if we break out of while loop then we exit
 

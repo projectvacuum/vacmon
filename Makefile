@@ -33,8 +33,8 @@
 
 include VERSION
 
-INSTALL_FILES=vacmond vacd.init VERSION vacd.logrotate \
-          CHANGES
+INSTALL_FILES=vacmond vacmond.init VERSION vacmond.logrotate \
+          CHANGES vacutils.py __init__.py
           
 TGZ_FILES=$(INSTALL_FILES) Makefile vacmon.spec
 

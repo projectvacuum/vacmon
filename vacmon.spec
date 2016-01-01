@@ -40,3 +40,4 @@ fi
 /usr/sbin/*
 /etc/rc.d/init.d/vacmond
 /etc/logrotate.d/vacmond
+%{python_sitearch}/vacmon

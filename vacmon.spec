@@ -38,6 +38,5 @@ fi
 
 %files
 /usr/sbin/*
-/var/lib/vacmon
 /etc/rc.d/init.d/vacmond
 /etc/logrotate.d/vacmond

@@ -50,15 +50,12 @@ vacmon.tgz: $(TGZ_FILES)
 install: $(INSTALL_FILES)
 	mkdir -p $(RPM_BUILD_ROOT)/usr/sbin \
                  $(RPM_BUILD_ROOT)$(PYTHON_SITEARCH)/vacmon \
-		 $(RPM_BUILD_ROOT)/var/lib/vacmon/tmp \
 	         $(RPM_BUILD_ROOT)/etc/rc.d/init.d \
 	         $(RPM_BUILD_ROOT)/etc/logrotate.d
 	cp vacmond \
            $(RPM_BUILD_ROOT)/usr/sbin
-	cp __init__.py shared.py vacutils.py \
+	cp __init__.py vacutils.py \
            $(RPM_BUILD_ROOT)$(PYTHON_SITEARCH)/vacmon
-	cp VERSION \
-	   $(RPM_BUILD_ROOT)/var/lib/vacmon
 	cp vacmond.init \
 	   $(RPM_BUILD_ROOT)/etc/rc.d/init.d/vacmond
 	cp vacmond.logrotate \

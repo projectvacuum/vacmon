@@ -144,13 +144,13 @@ def vacmonListener():
      id = str(time.time()) + '.' + str(n)
      n += 1
        
-     if 'method' in message and message['method'] == 'factory':
+     if 'message_type' in message and message['message_type'] == 'factory_status':
        try:
          processFactory(curl, jsonMessage, id)
        except:
          pass
 
-     elif 'method' in message and message['method'] == 'machinetype':
+     elif 'message_type' in message and message['message_type'] == 'machinetype_status':
        try:
          processMachinetype(curl, jsonMessage, id)
        except:

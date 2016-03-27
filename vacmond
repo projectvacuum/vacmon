@@ -3,7 +3,7 @@
 #  vacmond - Vac monitoring daemon 
 #
 #  Andrew McNab, University of Manchester.
-#  Copyright (c) 2013-5. All rights reserved.
+#  Copyright (c) 2013-6. All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or
 #  without modification, are permitted provided that the following
@@ -45,16 +45,16 @@ import pycurl
 
 import vacmon
 
-def processFactory(curl, jsonMessage):
+def processFactory(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/vacmon/factories/' + str(time.time()) )
+   curl.setopt(pycurl.URL, 'http://localhost:9200/vacmon/factories/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
    curl.perform()
    
-def processMachinetype(curl, jsonMessage):
+def processMachinetype(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/vacmon/machinetypes/' + str(time.time()) )
+   curl.setopt(pycurl.URL, 'http://localhost:9200/vacmon/machinetypes/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
    curl.perform()
@@ -78,6 +78,8 @@ def vacmonListener():
    vacmon.vacutils.logLine('vacmon listener starts')
    
    vacmon.vacutils.setProcessName('vacmond')
+
+   n = 0
 
    while True:
    
@@ -139,15 +141,18 @@ def vacmonListener():
      except:
        continue
        
+     id = str(time.time()) + '.' + str(n)
+     n += 1
+       
      if 'method' in message and message['method'] == 'factory':
        try:
-         processFactory(curl, jsonMessage)
+         processFactory(curl, jsonMessage, id)
        except:
          pass
 
      elif 'method' in message and message['method'] == 'machinetype':
        try:
-         processMachinetype(curl, jsonMessage)
+         processMachinetype(curl, jsonMessage, id)
        except:
          pass
           

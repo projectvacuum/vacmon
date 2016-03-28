@@ -1,0 +1,186 @@
+{
+    "mappings" : {
+      "factories" : {
+        "properties" : {
+          "boot_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "factory" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "factory_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "kernel_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "load_average" : {
+            "type" : "double"
+          },
+          "mem_total_kb" : {
+            "type" : "long"
+          },
+          "mem_used_kb" : {
+            "type" : "long"
+          },
+          "message_type" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "metadata_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "method" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "mjf_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "os_issue" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "responder_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "root_disk_avail_inodes" : {
+            "type" : "long"
+          },
+          "root_disk_avail_kb" : {
+            "type" : "long"
+          },
+          "running_cpus" : {
+            "type" : "long"
+          },
+          "running_machines" : {
+            "type" : "long"
+          },
+          "site" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "space" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "swap_free_kb" : {
+            "type" : "long"
+          },
+          "swap_used_kb" : {
+            "type" : "long"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "total_cpus" : {
+            "type" : "long"
+          },
+          "total_hs06" : {
+            "type" : "double"
+          },
+          "total_machines" : {
+            "type" : "long"
+          },
+          "vac_disk_avail_inodes" : {
+            "type" : "long"
+          },
+          "vac_disk_avail_kb" : {
+            "type" : "long"
+          },
+          "vac_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "vacquery_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          }
+        }
+      },
+      "machinetypes" : {
+        "properties" : {
+          "cookie" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "factory" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "fqan" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "machinetype" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "message_type" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "method" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "num_before_fizzle" : {
+            "type" : "long"
+          },
+          "num_machinetypes" : {
+            "type" : "long"
+          },
+          "shutdown_machine" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "shutdown_message" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "shutdown_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "site" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "space" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "total_hs06" : {
+            "type" : "double"
+          },
+          "total_machines" : {
+            "type" : "long"
+          },
+          "vac_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "vacquery_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          }
+        }
+      }
+    }
+}

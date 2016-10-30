@@ -141,6 +141,8 @@ def vacmonListener():
      except:
        continue
        
+     message['time_received'] = int(time.time())
+       
      id = str(time.time()) + '.' + str(n)
      n += 1
        

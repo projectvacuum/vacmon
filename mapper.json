@@ -43,10 +43,6 @@
             "type"   : "date",
             "format" : "epoch_second"
           },
-          "method" : {
-            "type" : "string",
-            "index" : "not_analyzed"
-          },
           "mjf_heartbeat_time" : {
             "type"   : "date",
             "format" : "epoch_second"
@@ -65,8 +61,11 @@
           "root_disk_avail_kb" : {
             "type" : "long"
           },
-          "running_cpus" : {
+          "running_processors" : {
             "type" : "long"
+          },
+          "running_hs06" : {
+            "type" : "double"
           },
           "running_machines" : {
             "type" : "long"
@@ -89,22 +88,22 @@
             "type"   : "date",
             "format" : "epoch_second"
           },
-          "total_cpus" : {
+          "max_processors" : {
             "type" : "long"
           },
-          "total_hs06" : {
+          "max_hs06" : {
             "type" : "double"
           },
-          "total_machines" : {
+          "max_machines" : {
             "type" : "long"
           },
-          "vac_disk_avail_inodes" : {
+          "daemon_disk_avail_inodes" : {
             "type" : "long"
           },
-          "vac_disk_avail_kb" : {
+          "daemon_disk_avail_kb" : {
             "type" : "long"
           },
-          "vac_version" : {
+          "daemon_version" : {
             "type" : "string",
             "index" : "not_analyzed"
           },
@@ -140,10 +139,6 @@
             "type" : "string",
             "index" : "not_analyzed"
           },
-          "method" : {
-            "type" : "string",
-            "index" : "not_analyzed"
-          },
           "num_before_fizzle" : {
             "type" : "long"
           },
@@ -174,13 +169,16 @@
             "type"   : "date",
             "format" : "epoch_second"
           },
-          "total_hs06" : {
+          "running_hs06" : {
             "type" : "double"
           },
-          "total_machines" : {
+          "running_machines" : {
             "type" : "long"
           },
-          "vac_version" : {
+          "running_processors" : {
+            "type" : "long"
+          },
+          "daemon_version" : {
             "type" : "string",
             "index" : "not_analyzed"
           },

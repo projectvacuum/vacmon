@@ -44,9 +44,15 @@ import string
 import pprint
 import elasticsearch
 
-# This subclass causes unfilled series to be overlayed rather than stacked
-class SemiStackedLine(pygal.StackedLine):
-      def _points(self, x_pos):
+class VacMonStackedLine(pygal.StackedLine):
+
+  def __init__(self, timeStart, timeEnd, timeBuckets):
+        pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
+
+        self.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+
+  def _points(self, x_pos):
+        # Unfilled series to be overlayed rather than stacked
         """
         Convert given data values into drawable points (x, y)
         and interpolated points if interpolate option is specified
@@ -69,6 +75,11 @@ class SemiStackedLine(pygal.StackedLine):
                     serie.interpolated = self._interpolate(x_pos, accumulation)
                 else:
                     serie.interpolated = []
+
+  def htmlPrint(self):
+        print '<figure>'
+        print self.render()
+        print '</figure>'
 
 def htmlHeader(title):
   print 'Status: 200 OK'
@@ -102,34 +113,10 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                 {
                   "filter":
                     [
-                       {
-                         "range":
-                           {
-                             "time_sent":
-                               {
-                                 "from": %ld,
-                                 "to":   %ld
-                               }
-                           }
-                       },
-                       {
-                         "term":
-                           { 
-                             "site": "%s"
-                           }
-                       },
-                       {
-                         "term":
-                           { 
-                             "space": "%s"
-                           }
-                       },
-                       {
-                         "term":
-                           { 
-                             "factory": "%s"
-                           }
-                       }
+                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "term":  { "site":    "%s" } },
+                       { "term":  { "space":   "%s" } },
+                       { "term":  { "factory": "%s" } }
                     ]
                 }
               },
@@ -152,104 +139,20 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                       },
                     "aggs":
                       {
-                        "time_average": 
-                          {
-                            "avg": 
-                              { 
-                                "field": "time_sent" 
-                              }
-                          },
-                        "load_average": 
-                          {
-                            "avg": 
-                              {
-                                "field": "load_average" 
-                              }
-                          },
-                        "max_processors": 
-                          {
-                            "avg": 
-                              {
-                                "field": "max_processors" 
-                              }
-                          },
-                        "running_processors": 
-                          {
-                            "avg": 
-                              {
-                                "field": "running_processors" 
-                              }
-                          },
-                        "max_machines": 
-                          {
-                            "avg": 
-                              {
-                                "field": "max_machines" 
-                               }
-                          },
-                        "running_machines": 
-                          {
-                            "avg": 
-                              {
-                                "field": "running_machines" 
-                              }
-                          },
-                        "max_hs06": 
-                          {
-                            "avg": 
-                              {
-                                "field": "max_hs06" 
-                              }
-                          },
-                        "running_hs06": 
-                          {
-                            "avg": 
-                              {
-                                "field": "running_hs06" 
-                              }
-                          },
-                        "root_disk_avail_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "root_disk_avail_kb" 
-                              }
-                          },
-                        "daemon_disk_avail_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "daemon_disk_avail_kb" 
-                              }
-                          },
-                        "mem_total_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "mem_total_kb" 
-                              }
-                          },
-                        "mem_used_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "mem_used_kb" 
-                              }
-                          },
-                        "swap_free_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "swap_free_kb" 
-                              }
-                          },
-                        "swap_used_kb": 
-                          {
-                            "avg": 
-                              {
-                                "field": "swap_used_kb" 
-                              }
-                          }
+                        "time_average":         { "avg": { "field": "time_sent"            } },
+                        "load_average":         { "avg": { "field": "load_average"         } },
+                        "max_processors":       { "avg": { "field": "max_processors"       } },
+                        "running_processors":   { "avg": { "field": "running_processors"   } },
+                        "max_machines":         { "avg": { "field": "max_machines"         } },
+                        "running_machines":     { "avg": { "field": "running_machines"     } },
+                        "max_hs06":             { "avg": { "field": "max_hs06"             } },
+                        "running_hs06":         { "avg": { "field": "running_hs06"         } },
+                        "root_disk_avail_kb":   { "avg": { "field": "root_disk_avail_kb"   } },
+                        "daemon_disk_avail_kb": { "avg": { "field": "daemon_disk_avail_kb" } },
+                        "mem_total_kb":         { "avg": { "field": "mem_total_kb"         } },
+                        "mem_used_kb":          { "avg": { "field": "mem_used_kb"          } },
+                        "swap_free_kb":         { "avg": { "field": "swap_free_kb"         } },
+                        "swap_used_kb":         { "avg": { "field": "swap_used_kb"         } }
                       }
                   }
               }                         
@@ -304,71 +207,46 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
          
     # Load/processors on this factory
   
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'CPU load & processors on factory ' + factoryName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
-    line_chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
-    line_chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
-    line_chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'CPU load & processors on factory ' + factoryName
+    chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
+    chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
+    chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
 
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
-    
     # Machines on this factory
   
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Machines on factory ' + factoryName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
-    line_chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
-    line_chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Machines on factory ' + factoryName
+    chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
+    chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # HS06 on this factory
   
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'HS06 on factory ' + factoryName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
-    line_chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
-    line_chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'HS06 on factory ' + factoryName
+    chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
+    chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # Available disk on this factory
   
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Available disk on factory ' + factoryName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
-    line_chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
-    line_chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Available disk on factory ' + factoryName
+    chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
+    chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
+    chart.htmlPrint()
     
     # Memory/swap on this factory
   
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Memory/swap on factory ' + factoryName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
-    line_chart.add('Mem used (MiB)', memUsedValues, fill=True, show_dots=False)
-    line_chart.add('Mem free (MiB)', memFreeValues, fill=True, show_dots=False)
-    line_chart.add('Swap used (MiB)', swapUsedValues, fill=True, show_dots=False)
-    line_chart.add('Swap free (MiB)', swapFreeValues, fill=True, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Memory/swap on factory ' + factoryName
+    chart.add('Mem used (MiB)', memUsedValues, fill=True, show_dots=False)
+    chart.add('Mem free (MiB)', memFreeValues, fill=True, show_dots=False)
+    chart.add('Swap used (MiB)', swapUsedValues, fill=True, show_dots=False)
+    chart.add('Swap free (MiB)', swapFreeValues, fill=True, show_dots=False)
+    chart.htmlPrint()
     
   except Exception as e:
     print str(e)
@@ -395,28 +273,9 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                  {
                    "filter":
                      [
-                       {
-                         "range":
-                           {
-                             "time_sent":
-                               {
-                                 "from": %ld,
-                                 "to":   %ld
-                               }
-                           }
-                       },
-                       {
-                         "term": 
-                           { 
-                             "site": "%s"
-                           }
-                       },
-                       {
-                         "term": 
-                           { 
-                             "space": "%s"
-                           }
-                       }
+                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "term":  { "site": "%s"  } },
+                       { "term":  { "space": "%s" } }
                      ]
                  }
               },
@@ -440,123 +299,29 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
                         "offset"         : %ld,
-                        "extended_bounds":
-                          {
-                            "min": %ld,
-                            "max": %ld
-                          }
+                        "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs": 
                       {
                         "factory":
                           {
-                            "terms":
-                              { 
-                                "field": "factory",
-                                "size" : 99999
-                              },
-                            "aggs":
-                              {
-                                "load_average": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field" : "load_average"
-                                      }
-                                  },
-                                "max_processors": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "max_processors" 
-                                      }
-                                  },
-                                "running_processors": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "running_processors" 
-                                      }
-                                  },
-                                "max_machines": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "max_machines" 
-                                      }
-                                  },
-                                "running_machines": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "running_machines" 
-                                      }
-                                  },
-                                "max_hs06": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "max_hs06" 
-                                      }
-                                  },
-                                "running_hs06": 
-                                  {
-                                    "avg": 
-                                      {
-                                        "field": "running_hs06" 
-                                      }
-                                  }
-                              }
+                            "terms": { "field": "factory", "size" : 99999 },
+                            "aggs":  { "load_average":       { "avg": { "field" : "load_average"      } },
+                                       "max_processors":     { "avg": { "field" : "max_processors"    } },
+                                       "running_processors": { "avg": { "field": "running_processors" } },
+                                       "max_machines":       { "avg": { "field": "max_machines"       } },
+                                       "running_machines":   { "avg": { "field": "running_machines"   } },
+                                       "max_hs06":           { "avg": { "field": "max_hs06"           } },
+                                       "running_hs06":       { "avg": { "field": "running_hs06"       } }
+                                     }
                           },
-                        "load_average_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>load_average"
-                              }
-                          },
-                        "max_processors_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>max_processors"
-                              }
-                          },
-                        "running_processors_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>running_processors"
-                              }
-                          },
-                        "max_machines_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>max_machines"
-                              }
-                          },
-                        "running_machines_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>running_machines"
-                              }
-                          },
-                        "max_hs06_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>max_hs06"
-                              }
-                          },
-                        "running_hs06_space": 
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "factory>running_hs06"
-                              }
-                          }
+                        "load_average_space":       { "sum_bucket": { "buckets_path": "factory>load_average"       } },
+                        "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
+                        "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
+                        "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
+                        "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
+                        "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
+                        "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
                       }
                   }
               }
@@ -606,77 +371,56 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
 
     # CPU load per factory
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'CPU load in space ' + spaceName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'CPU load in space ' + spaceName
 
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
+      chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryLoadAvgLists[j['key']], 
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
-#    line_chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
 
     # Running processors per factory
     
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Processors in space ' + spaceName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Processors in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
+      chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningProcLists[j['key']], 
                       fill=True, 
                       show_dots=False )
 
-    line_chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # Running machines per factory
     
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Machines in space ' + spaceName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Machines in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
+      chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningMachinesLists[j['key']], 
                       fill=True, 
                       show_dots=False )
 
-    line_chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # Running HS06 per factory
     
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'HS06 in space ' + spaceName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'HS06 in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
+      chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningHS06Lists[j['key']], 
                       fill=True, 
                       show_dots=False )
 
-    line_chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
     
   except Exception as e:
     print str(e)
@@ -701,22 +445,8 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                  {
                    "filter":
                      [
-                       {
-                         "range":
-                           {
-                             "time_sent":
-                               {
-                                 "from": %ld,
-                                 "to":   %ld
-                               }
-                           }
-                       },
-                       {
-                         "match": 
-                           { 
-                             "site": "%s"
-                           }
-                       }
+                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "match": { "site": "%s" } }
                      ]
                  }
               },
@@ -740,162 +470,36 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
                         "offset"         : %ld,
-                        "extended_bounds":
-                          {
-                            "min": %ld,
-                            "max": %ld
-                          }
+                        "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
                       {
                         "space":
                           {
-                            "terms":
-                              {
-                                "field": "space",
-                                "size" : 99999
-                              },
-                            "aggs":
-                              {
-                                "factory":
-                                  {
-                                    "terms":
-                                      {
-                                        "field": "factory",
-                                        "size" : 99999
-                                      },
-                                    "aggs":
-                                      {
-                                        "max_processors": 
-                                          {
-                                            "avg": 
-                                              {
-                                                "field" : "max_processors"
-                                              }
-                                          },
-                                        "running_processors":
-                                          {
-                                            "avg":
-                                              {
-                                                "field" : "running_processors"
-                                              }
-                                          },
-                                        "max_machines": 
-                                          {
-                                            "avg": 
-                                              {
-                                                "field" : "max_machines"
-                                              }
-                                          },
-                                        "running_machines":
-                                          {
-                                            "avg":
-                                              {
-                                                "field" : "running_machines"
-                                              }
-                                          },
-                                        "max_hs06":
-                                          {
-                                            "avg":
-                                              {
-                                                "field" : "max_hs06"
-                                              }
-                                          },
-                                        "running_hs06":
-                                          {
-                                            "avg":
-                                              {
-                                                "field" : "running_hs06"
-                                              }
-                                          }
-                                      }
-                                  },
-                                "max_processors_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>max_processors"
-                                      }
-                                  },
-                                "running_processors_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>running_processors"
-                                      }
-                                  },
-                                "max_machines_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>max_machines"
-                                      }
-                                  },
-                                "running_machines_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>running_machines"
-                                      }
-                                  },
-                                "max_hs06_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>max_hs06"
-                                      }
-                                  },
-                                "running_hs06_space":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "factory>running_hs06"
-                                      }
-                                  }
-                              }
+                            "terms": { "field": "space", "size" : 99999 },
+                            "aggs": { "factory": { "terms": { "field": "factory", "size" : 99999 },
+                                                   "aggs":  { "max_processors":     { "avg": { "field" : "max_processors"     } },
+                                                              "running_processors": { "avg": { "field" : "running_processors" } },
+                                                              "max_machines":       { "avg": { "field" : "max_machines"       } },
+                                                              "running_machines":   { "avg": { "field" : "running_machines"   } },
+                                                              "max_hs06":           { "avg": { "field" : "max_hs06"           } },
+                                                              "running_hs06":       { "avg": { "field" : "running_hs06"       } }
+                                                            }
+                                                 },
+                                      "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
+                                      "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
+                                      "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
+                                      "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
+                                      "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
+                                      "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
+                                    }
                           },
-                        "max_processors_site":
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "space>max_processors_space"
-                              }
-                          },
-                        "running_processors_site":
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "space>running_processors_space"
-                              }
-                          },
-                        "max_machines_site":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "space>max_machines_space"
-                              }
-                          },
-                        "running_machines_site":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "space>running_machines_space"
-                              }
-                          },
-                        "max_hs06_site":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "space>max_hs06_space"
-                              }
-                          },
-                        "running_hs06_site":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "space>running_hs06_space"
-                              }
-                          }
+                        "max_processors_site":     { "sum_bucket":  { "buckets_path": "space>max_processors_space"     } },
+                        "running_processors_site": { "sum_bucket":  { "buckets_path": "space>running_processors_space" } },
+                        "max_machines_site":       { "sum_bucket":  { "buckets_path": "space>max_machines_space"       } },
+                        "running_machines_site":   { "sum_bucket":  { "buckets_path": "space>running_machines_space"   } },
+                        "max_hs06_site":           { "sum_bucket":  { "buckets_path": "space>max_hs06_space"           } },
+                        "running_hs06_site":       { "sum_bucket":  { "buckets_path": "space>running_hs06_space"       } }
                       }
                   }
               }
@@ -939,60 +543,45 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
 
     # Processors running at this site
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running processors at site ' + siteName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running processors at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningProcLists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # Machines running at this site
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running machines at site ' + siteName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running machines at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningMachinesLists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # HS06 running at this site
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running HS06 at site ' + siteName
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningHS06Lists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
     
   except Exception as e:
     print str(e)
@@ -1017,16 +606,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                  {
                    "filter":
                      [
-                       {
-                         "range":
-                           {
-                             "time_sent":
-                               {
-                                 "from": %ld,
-                                 "to":   %ld
-                               }
-                           }
-                       }
+                       { "range": { "time_sent": { "from": %ld, "to":   %ld } } }
                      ]
                  }
               },
@@ -1034,12 +614,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
               {
                 "site_names":
                   {
-                    "terms":
-                      {
-                        "field": "site",
-                        "size" : 99999,
-                        "order" : { "_term" : "asc" }
-                      }
+                    "terms": { "field": "site", "size" : 99999, "order" : { "_term" : "asc" } }
                   },
                 "all_histogram":
                   {
@@ -1050,215 +625,54 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
                         "offset"         : %ld,
-                        "extended_bounds":
-                          {
-                            "min": %ld,
-                            "max": %ld
-                          }
+                        "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
                       {
                         "site":
                           {
-                            "terms":
-                              {
-                                "field": "site",
-                                "size" : 99999
-                              },
+                            "terms": { "field": "site", "size" : 99999 },
                             "aggs":
                               {
                                 "space":
                                   {
-                                    "terms":
-                                      {
-                                        "field": "space",
-                                        "size" : 99999
-                                      },
-                                    "aggs":
-                                      {                                                            
-                                        "factory":
+                                    "terms": { "field": "space", "size" : 99999 },
+                                    "aggs":  
+                                      { "factory":
                                           {
-                                            "terms":
-                                              {
-                                                "field": "factory",
-                                                "size" : 99999
-                                              },
+                                            "terms": { "field": "factory", "size" : 99999 },
                                             "aggs":
                                               {                                                            
-                                                "max_processors": 
-                                                  {
-                                                    "avg": 
-                                                      {
-                                                        "field" : "max_processors"
-                                                      }
-                                                  },
-                                                "running_processors":
-                                                  {
-                                                    "avg":
-                                                      {
-                                                        "field" : "running_processors"
-                                                      }
-                                                  },
-                                                "max_machines": 
-                                                  {
-                                                    "avg": 
-                                                      {
-                                                        "field" : "max_machines"
-                                                      }
-                                                  },
-                                                "running_machines":
-                                                  {
-                                                    "avg":
-                                                      {
-                                                        "field" : "running_machines"
-                                                      }
-                                                  },
-                                                "max_hs06":
-                                                  {
-                                                    "avg":
-                                                      {
-                                                        "field" : "max_hs06"
-                                                      }
-                                                  },
-                                                "running_hs06":
-                                                  {
-                                                    "avg":
-                                                      {
-                                                        "field" : "running_hs06"
-                                                      }
-                                                  }
+                                                "max_processors":     { "avg": { "field" : "max_processors"     } },
+                                                "running_processors": { "avg": { "field" : "running_processors" } },
+                                                "max_machines":       { "avg": { "field" : "max_machines"       } },
+                                                "running_machines":   { "avg": { "field" : "running_machines"   } },
+                                                "max_hs06":           { "avg": { "field" : "max_hs06"           } },
+                                                "running_hs06":       { "avg": { "field" : "running_hs06"       } }
                                               }
                                           },
-                                        "max_processors_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>max_processors"
-                                              }
-                                          },
-                                        "running_processors_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>running_processors"
-                                              }
-                                          },
-                                        "max_machines_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>max_machines"
-                                              }
-                                          },
-                                        "running_machines_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>running_machines"
-                                              }
-                                          },
-                                        "max_hs06_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>max_hs06"
-                                              } 
-                                          },
-                                        "running_hs06_space":
-                                          {
-                                            "sum_bucket":
-                                              {
-                                                "buckets_path": "factory>running_hs06"
-                                              }
-                                          }
+                                        "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
+                                        "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
+                                        "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
+                                        "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
+                                        "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
+                                        "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
                                       }
                                   },
-                                "max_processors_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>max_processors_space"
-                                      }
-                                  },
-                                "running_processors_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>running_processors_space"
-                                      }
-                                  },
-                                "max_machines_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>max_machines_space"
-                                      }
-                                  },
-                                "running_machines_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>running_machines_space"
-                                      }
-                                  },
-                                "max_hs06_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>max_hs06_space"
-                                      }
-                                  },
-                                "running_hs06_site":
-                                  {
-                                    "sum_bucket":
-                                      {
-                                        "buckets_path": "space>running_hs06_space"
-                                      }
-                                  }
+                                "max_processors_site":     { "sum_bucket": { "buckets_path": "space>max_processors_space"     } },
+                                "running_processors_site": { "sum_bucket": { "buckets_path": "space>running_processors_space" } },
+                                "max_machines_site":       { "sum_bucket": { "buckets_path": "space>max_machines_space"       } },
+                                "running_machines_site":   { "sum_bucket": { "buckets_path": "space>running_machines_space"   } },
+                                "max_hs06_site":           { "sum_bucket": { "buckets_path": "space>max_hs06_space"           } },
+                                "running_hs06_site":       { "sum_bucket": { "buckets_path": "space>running_hs06_space"       } }
                               }
                           },
-                        "max_processors_all":
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "site>max_processors_site"
-                              }
-                          },
-                        "running_processors_all":
-                          {
-                            "sum_bucket": 
-                              {
-                                "buckets_path": "site>running_processors_site"
-                              }
-                          },
-                        "max_machines_all":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "site>max_machines_site"
-                              }
-                          },
-                        "running_machines_all":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "site>running_machines_site"
-                              }
-                          },
-                        "max_hs06_all":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "site>max_hs06_site"
-                              }
-                          },
-                        "running_hs06_all":
-                          {
-                            "sum_bucket":
-                              {
-                                "buckets_path": "site>running_hs06_site"
-                              }
-                          }
+                        "max_processors_all":     { "sum_bucket": { "buckets_path": "site>max_processors_site"     } },
+                        "running_processors_all": { "sum_bucket": { "buckets_path": "site>running_processors_site" } },
+                        "max_machines_all":       { "sum_bucket": { "buckets_path": "site>max_machines_site"       } },
+                        "running_machines_all":   { "sum_bucket": { "buckets_path": "site>running_machines_site"   } },
+                        "max_hs06_all":           { "sum_bucket": { "buckets_path": "site>max_hs06_site"           } },
+                        "running_hs06_all":       { "sum_bucket": { "buckets_path": "site>running_hs06_site"       } }
                       }
                   }
               }
@@ -1302,60 +716,45 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 
     # Processors running at all sites
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running processors'
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running processors'
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningProcLists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # Machines running at all sites
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running machines'
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running machines'
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningMachinesLists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
     
     # HS06 running at all sites
 
-    line_chart = SemiStackedLine(include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
-    line_chart.title = 'Running HS06'
-    # Labels are the midpoint times of each bucket
-    line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart.title = 'Running HS06'
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+      chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningHS06Lists[j['key']],
                       fill=True, 
                       show_dots=False)
 
-    line_chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
-
-    print '<figure>'
-    print line_chart.render()
-    print '</figure>'
+    chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
     
   except Exception as e:
     print str(e)

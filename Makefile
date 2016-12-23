@@ -34,7 +34,8 @@
 include VERSION
 
 INSTALL_FILES=vacmond vacmond.init VERSION vacmond.logrotate \
-          CHANGES vacutils.py __init__.py
+          CHANGES vacutils.py __init__.py \
+          header.html footer.html vaclogowhite.png
           
 TGZ_FILES=$(INSTALL_FILES) Makefile vacmon.spec
 
@@ -51,7 +52,8 @@ install: $(INSTALL_FILES)
 	mkdir -p $(RPM_BUILD_ROOT)/usr/sbin \
                  $(RPM_BUILD_ROOT)$(PYTHON_SITEARCH)/vacmon \
 	         $(RPM_BUILD_ROOT)/etc/rc.d/init.d \
-	         $(RPM_BUILD_ROOT)/etc/logrotate.d
+	         $(RPM_BUILD_ROOT)/etc/logrotate.d \
+	         $(RPM_BUILD_ROOT)/var/www/vacmon 	         
 	cp vacmond \
            $(RPM_BUILD_ROOT)/usr/sbin
 	cp __init__.py vacutils.py \
@@ -60,12 +62,14 @@ install: $(INSTALL_FILES)
 	   $(RPM_BUILD_ROOT)/etc/rc.d/init.d/vacmond
 	cp vacmond.logrotate \
 	   $(RPM_BUILD_ROOT)/etc/logrotate.d/vacmond
+	cp header.html footer.html vaclogowhite.png \
+	   $(RPM_BUILD_ROOT)/var/www/vacmon
 	
 rpm: vacmon.tgz
 	rm -Rf RPMTMP
 	mkdir -p RPMTMP/SOURCES RPMTMP/SPECS RPMTMP/BUILD \
          RPMTMP/SRPMS RPMTMP/RPMS/noarch RPMTMP/BUILDROOT
-	cp -f vacmon.tgz RPMTMP/SOURCES        
+	cp -f vacmon.tgz RPMTMP/SOURCES
 	export VACMON_VERSION=$(VERSION) ; rpmbuild -ba \
 	  --define "_topdir $(shell pwd)/RPMTMP" \
 	  --buildroot $(shell pwd)/RPMTMP/BUILDROOT vacmon.spec

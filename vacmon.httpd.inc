@@ -54,6 +54,7 @@ CustomLog    logs/http--vacmon.log combined
 Options Indexes
 </Directory>
 
-ScriptAliasMatch ^/.* /usr/sbin/vacmon-cgi
+ScriptAliasMatch ^/.*/.*  /usr/sbin/vacmon-cgi
+ScriptAliasMatch ^/[^.]*$ /usr/sbin/vacmon-cgi
 
 </VirtualHost>

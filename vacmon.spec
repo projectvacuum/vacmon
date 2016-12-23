@@ -41,3 +41,4 @@ fi
 /etc/rc.d/init.d/vacmond
 /etc/logrotate.d/vacmond
 %{python_sitearch}/vacmon
+/var/www/vacmon

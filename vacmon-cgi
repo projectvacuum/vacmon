@@ -81,13 +81,13 @@ def htmlFooter():
   print open('/var/www/vacmon/footer.html', 'r').read()
   print '</html>'
 
-def oneFactory(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spaceName, factoryName):
+def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
 
   htmlHeader('VacMon ' + factoryName)
 
-  print ('<div class="breadcrumbs"><a href="/' + timeRangeVO + '/">VacMon</a> ' +
-         '/ <a href="/' + timeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
-         '/ <a href="/' + timeRangeVO + '/' + siteName + '/' + spaceName + '/">' + spaceName + '</a> ' +
+  print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
+         '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
+         '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/' + spaceName + '/">' + spaceName + '</a> ' +
          '/ ' + factoryName.split('.')[0] + '</div>')
                              
   print '<h1>Factory ' + factoryName + '</h1>'
@@ -375,12 +375,12 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, s
     
   htmlFooter()
   
-def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spaceName):
+def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName):
 
   htmlHeader('VacMon ' + spaceName)
 
-  print ('<div class="breadcrumbs"><a href="/' + timeRangeVO + '/">VacMon</a> ' +
-         '/ <a href="/' + timeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
+  print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
+         '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
          '/ ' + spaceName + '</div>')
                              
   print '<h1>Space ' + spaceName + '</h1>'
@@ -612,7 +612,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spa
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]    
 
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': '/%s/%s/%s/%s/' % (timeRangeVO, siteName, spaceName, j['key']) }, 
+      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryLoadAvgLists[j['key']], 
                       fill=True, 
                       show_dots=False)
@@ -631,7 +631,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spa
     # Labels are the midpoint times of each bucket
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': '/%s/%s/%s/%s/' % (timeRangeVO, siteName, spaceName, j['key']) }, 
+      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningProcLists[j['key']], 
                       fill=True, 
                       show_dots=False )
@@ -649,7 +649,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spa
     # Labels are the midpoint times of each bucket
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': '/%s/%s/%s/%s/' % (timeRangeVO, siteName, spaceName, j['key']) }, 
+      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningMachinesLists[j['key']], 
                       fill=True, 
                       show_dots=False )
@@ -667,7 +667,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spa
     # Labels are the midpoint times of each bucket
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets) for i in range(0, timeBuckets) ]
     for j in t['aggregations']['factory_names']['buckets']:
-      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': '/%s/%s/%s/%s/' % (timeRangeVO, siteName, spaceName, j['key']) }, 
+      line_chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningHS06Lists[j['key']], 
                       fill=True, 
                       show_dots=False )
@@ -683,11 +683,11 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName, spa
     
   htmlFooter()
   
-def oneSite(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName):
+def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
 
   htmlHeader('VacMon ' + siteName)
 
-  print ('<div class="breadcrumbs"><a href="/' + timeRangeVO + '/">VacMon</a> / ' + siteName + '</div>')
+  print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> / ' + siteName + '</div>')
                              
   print '<h1>Site ' + siteName + '</h1>'
 
@@ -945,7 +945,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/%s/' % (timeRangeVO, siteName, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningProcLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -964,7 +964,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/%s/' % (timeRangeVO, siteName, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningMachinesLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -983,7 +983,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['space_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/%s/' % (timeRangeVO, siteName, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
                       spaceRunningHS06Lists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -994,16 +994,12 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, timeRangeVO, siteName):
     print line_chart.render()
     print '</figure>'
     
-
-
-
-    
   except Exception as e:
     print str(e)
     
   htmlFooter()
   
-def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
+def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 
   htmlHeader('VacMon ' + siteName)
 
@@ -1312,7 +1308,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/' % (timeRangeVO, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningProcLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -1331,7 +1327,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/' % (timeRangeVO, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningMachinesLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -1350,7 +1346,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
     line_chart.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
 
     for j in t['aggregations']['site_names']['buckets']:
-      line_chart.add( { 'title': j['key'], 'xlink': '/%s/%s/' % (timeRangeVO, j['key']) }, 
+      line_chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningHS06Lists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -1373,18 +1369,18 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
 vacmonVersion = open('/var/www/vacmon/VERSION','r').readline().split('=',1)[1].strip()
 requestURI    = os.environ['REQUEST_URI']
 
-if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-./') != '':
+if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-./:') != '':
   # Redirect to main page if unacceptable characters in URI
-  print 'Status: 302 Found'
-  print 'Location: http://vacmon.gridpp.ac.uk/'
+  print 'Status: 302 Found 0'
+  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
   print
   sys.exit(0)
 
-timeRangeVO, siteName, spaceName, factoryName = (requestURI + '////').split('/')[1:5]
+sizeTimeRangeVO, siteName, spaceName, factoryName = (requestURI + '////').split('/')[1:5]
 
 # Static pages: main page and documentation
 
-if not timeRangeVO:
+if not sizeTimeRangeVO:
   htmlHeader('VacMon')
 
   try:
@@ -1396,21 +1392,36 @@ if not timeRangeVO:
   sys.exit(0)
 
 # Parse timeRange
+splitSizeTimeRangeVO = sizeTimeRangeVO.split(':')
 
-if ':' in timeRangeVO:
-  timeRange = timeRangeVO.split(':')[0]
-  voName    = timeRangeVO.split(':')[1]
+if len(splitSizeTimeRangeVO) < 2:
+  print 'Status: 302 Found 1'
+  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
+  print
+  sys.exit(0)
+
+try:
+  imageSize = int(splitSizeTimeRangeVO[0], 16)
+except:
+  print 'Status: 302 Found 2'
+  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
+  print
+  sys.exit(0)
+
+timeRange = splitSizeTimeRangeVO[1]
+
+if len(splitSizeTimeRangeVO) > 2:
+  voName = splitSizeTimeRangeVO[2]
 else:
-  timeRange = timeRangeVO
-  voName    = None
+  voName = None
 
 if '-' in timeRange:
   try:
     timeStart = int(timeRange.split('-')[0], 16)
     timeEnd   = int(timeRange.split('-')[1], 16)
   except:
-    print 'Status: 302 Found'
-    print 'Location: http://vacmon.gridpp.ac.uk/'
+    print 'Status: 302 Found 3'
+    print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
     print
     sys.exit(0)
     
@@ -1419,23 +1430,23 @@ else:
     timeEnd   = int(time.time())
     timeStart = timeEnd - int(timeRange, 16)
   except:
-    print 'Status: 302 Found'
-    print 'Location: http://vacmon.gridpp.ac.uk/'
+    print 'Status: 302 Found 4'
+    print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
     print
     sys.exit(0)
 
 # Pages with graphs
 
 if siteName and spaceName and factoryName:
-  oneFactory(timeStart, timeEnd, 20, voName, timeRangeVO, siteName, spaceName, factoryName)
+  oneFactory(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)
 
 elif siteName and spaceName:
-  oneSpace(timeStart, timeEnd, 20, voName, timeRangeVO, siteName, spaceName)
+  oneSpace(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName, spaceName)
 
 elif siteName:
-  oneSite(timeStart, timeEnd, 20, voName, timeRangeVO, siteName)
+  oneSite(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName)
 
 else:
-  allSites(timeStart, timeEnd, 20, voName, timeRangeVO)
+  allSites(timeStart, timeEnd, 20, voName, sizeTimeRangeVO)
 
 sys.exit(0)

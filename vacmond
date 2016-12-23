@@ -184,6 +184,18 @@ def vacmonListener():
 
      elif 'message_type' in message and message['message_type'] == 'machinetype_status':
 
+       if 'fqan' in message and message['fqan'][0] == '/':
+         message['vo'] = message['fqan'].split('/')[1]
+
+       if 'running_processors' not in message and 'running_cpus' in message:
+         message['running_processors'] = message['running_cpus']
+  
+       if 'running_machines' not in message and 'total_machines' in message:
+         message['running_machines'] = message['total_machines']
+  
+       if 'running_hs06' not in message and 'total_hs06' in message:
+         message['running_hs06'] = message['total_hs06']
+  
        vacmon.vacutils.logLine(str(message))
 
        # Now actually save the message

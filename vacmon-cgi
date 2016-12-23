@@ -106,14 +106,14 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
   try:
     es = elasticsearch.Elasticsearch()
   
-    searchBody =  """{
+    factoriesSearch =  """{
             "query":
               {
                 "bool":
                 {
                   "filter":
                     [
-                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
                        { "term":  { "site":    "%s" } },
                        { "term":  { "space":   "%s" } },
                        { "term":  { "factory": "%s" } }
@@ -126,7 +126,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "time_sent",
+                        "field"          : "received_time",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
@@ -139,7 +139,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                       },
                     "aggs":
                       {
-                        "time_average":         { "avg": { "field": "time_sent"            } },
+                        "time_average":         { "avg": { "field": "received_time"            } },
                         "load_average":         { "avg": { "field": "load_average"         } },
                         "max_processors":       { "avg": { "field": "max_processors"       } },
                         "running_processors":   { "avg": { "field": "running_processors"   } },
@@ -159,15 +159,67 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
            }""" % (timeStart, timeEnd, siteName, spaceName, factoryName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
 
     print '<pre>'
-#    pprint.pprint(json.loads(searchBody))
+    pprint.pprint(json.loads(factoriesSearch))
 
-    t = es.search(
-          index    = 'vacmon',
-          doc_type = 'factories',
-          size     = 0,
-          body     = searchBody)
+    fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
 
-#    pprint.pprint(t)
+    pprint.pprint(fs)
+    print '</pre>'
+    
+    machinetypesSearch =  """{
+            "query":
+              {
+                "bool":
+                {
+                  "filter":
+                    [
+                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
+                       { "term":  { "site":    "%s" } },
+                       { "term":  { "space":   "%s" } },
+                       { "term":  { "factory": "%s" } }
+                    ]
+                }
+              },
+            "aggs" : 
+              {
+                "machinetype_histogram": 
+                  {
+                    "date_histogram": 
+                      { 
+                        "field"          : "received_time",
+                        "interval"       : "%ds",
+                        "format"         : "epoch_second",
+                        "min_doc_count"  : 0,
+                        "offset"         : %ld,
+                        "extended_bounds":
+                          {
+                            "min": %ld,
+                            "max": %ld
+                          }
+                      },
+                    "aggs":
+                      {
+                        "machinetype":
+                          {
+                            "terms": { "field": "machinetype", "size" : 99999 },
+                            "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
+                                       "running_machines":   { "avg": { "field": "running_machines"   } },
+                                       "running_hs06":       { "avg": { "field": "running_hs06"       } }
+                                     }
+
+                          },                      
+                        "time_average": { "avg": { "field": "received_time" } }
+                      }
+                  }
+              }                         
+           }""" % (timeStart, timeEnd, siteName, spaceName, factoryName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+
+    print '<pre>'
+#    pprint.pprint(json.loads(machinetypesSearch))
+
+#    ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
+
+#    pprint.pprint(ms)
     print '</pre>'
     
     loadAvgValues         = []
@@ -184,7 +236,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
     swapUsedValues        = []
     swapFreeValues        = []
 
-    for i in t['aggregations']['factory_load_histogram']['buckets']:
+    for i in fs['aggregations']['factory_load_histogram']['buckets']:
        if i['key'] >= timeStart * 1000 and i['key'] < timeEnd * 1000:
          loadAvgValues.append(i['load_average']['value'] if i['load_average']['value'] else 0)
          maxProcValues.append(i['max_processors']['value'])
@@ -204,9 +256,9 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
          
          swapUsedValues.append(i['swap_used_kb']['value'] / 1024)
          swapFreeValues.append(i['swap_free_kb']['value'] / 1024)
-         
+
     # Load/processors on this factory
-  
+
     chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
     chart.title = 'CPU load & processors on factory ' + factoryName
     chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
@@ -215,31 +267,31 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
     chart.htmlPrint()
 
     # Machines on this factory
-  
+
     chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
     chart.title = 'Machines on factory ' + factoryName
     chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
     chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
-    
+
     # HS06 on this factory
-  
+
     chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
     chart.title = 'HS06 on factory ' + factoryName
     chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
     chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
-    
+
     # Available disk on this factory
-  
+
     chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
     chart.title = 'Available disk on factory ' + factoryName
     chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
     chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
     chart.htmlPrint()
-    
+
     # Memory/swap on this factory
-  
+
     chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
     chart.title = 'Memory/swap on factory ' + factoryName
     chart.add('Mem used (MiB)', memUsedValues, fill=True, show_dots=False)
@@ -247,7 +299,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
     chart.add('Swap used (MiB)', swapUsedValues, fill=True, show_dots=False)
     chart.add('Swap free (MiB)', swapFreeValues, fill=True, show_dots=False)
     chart.htmlPrint()
-    
+
   except Exception as e:
     print str(e)
     
@@ -273,7 +325,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                  {
                    "filter":
                      [
-                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
                        { "term":  { "site": "%s"  } },
                        { "term":  { "space": "%s" } }
                      ]
@@ -294,7 +346,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "time_sent",
+                        "field"          : "received_time",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
@@ -328,7 +380,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
            }""" % (timeStart, timeEnd, siteName, spaceName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
 
     print '<pre>'
-#    pprint.pprint(json.loads(searchBody))
+    pprint.pprint(json.loads(searchBody))
 
     t = es.search(
           index    = 'vacmon',
@@ -336,7 +388,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
           size     = 0,
           body     = searchBody)
 
-#    pprint.pprint(t)
+    pprint.pprint(t)
     print '</pre>'
     
     loadAvgValues     = []
@@ -445,7 +497,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                  {
                    "filter":
                      [
-                       { "range": { "time_sent": { "from": %ld, "to": %ld } } },
+                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
                        { "match": { "site": "%s" } }
                      ]
                  }
@@ -465,7 +517,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "time_sent",
+                        "field"          : "received_time",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
@@ -606,7 +658,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                  {
                    "filter":
                      [
-                       { "range": { "time_sent": { "from": %ld, "to":   %ld } } }
+                       { "range": { "received_time": { "from": %ld, "to":   %ld } } }
                      ]
                  }
               },
@@ -620,7 +672,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "time_sent",
+                        "field"          : "received_time",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,

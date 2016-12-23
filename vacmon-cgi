@@ -1071,55 +1071,108 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
                               },
                             "aggs":
                               {
-                                "factory":
+                                "space":
                                   {
                                     "terms":
                                       {
-                                        "field": "factory",
+                                        "field": "space",
                                         "size" : 99999
                                       },
                                     "aggs":
-                                      {
-                                        "max_processors": 
+                                      {                                                            
+                                        "factory":
                                           {
-                                            "avg": 
+                                            "terms":
                                               {
-                                                "field" : "max_processors"
+                                                "field": "factory",
+                                                "size" : 99999
+                                              },
+                                            "aggs":
+                                              {                                                            
+                                                "max_processors": 
+                                                  {
+                                                    "avg": 
+                                                      {
+                                                        "field" : "max_processors"
+                                                      }
+                                                  },
+                                                "running_processors":
+                                                  {
+                                                    "avg":
+                                                      {
+                                                        "field" : "running_processors"
+                                                      }
+                                                  },
+                                                "max_machines": 
+                                                  {
+                                                    "avg": 
+                                                      {
+                                                        "field" : "max_machines"
+                                                      }
+                                                  },
+                                                "running_machines":
+                                                  {
+                                                    "avg":
+                                                      {
+                                                        "field" : "running_machines"
+                                                      }
+                                                  },
+                                                "max_hs06":
+                                                  {
+                                                    "avg":
+                                                      {
+                                                        "field" : "max_hs06"
+                                                      }
+                                                  },
+                                                "running_hs06":
+                                                  {
+                                                    "avg":
+                                                      {
+                                                        "field" : "running_hs06"
+                                                      }
+                                                  }
                                               }
                                           },
-                                        "running_processors":
+                                        "max_processors_space":
                                           {
-                                            "avg":
+                                            "sum_bucket":
                                               {
-                                                "field" : "running_processors"
+                                                "buckets_path": "factory>max_processors"
                                               }
                                           },
-                                        "max_machines": 
+                                        "running_processors_space":
                                           {
-                                            "avg": 
+                                            "sum_bucket":
                                               {
-                                                "field" : "max_machines"
+                                                "buckets_path": "factory>running_processors"
                                               }
                                           },
-                                        "running_machines":
+                                        "max_machines_space":
                                           {
-                                            "avg":
+                                            "sum_bucket":
                                               {
-                                                "field" : "running_machines"
+                                                "buckets_path": "factory>max_machines"
                                               }
                                           },
-                                        "max_hs06":
+                                        "running_machines_space":
                                           {
-                                            "avg":
+                                            "sum_bucket":
                                               {
-                                                "field" : "max_hs06"
+                                                "buckets_path": "factory>running_machines"
                                               }
                                           },
-                                        "running_hs06":
+                                        "max_hs06_space":
                                           {
-                                            "avg":
+                                            "sum_bucket":
                                               {
-                                                "field" : "running_hs06"
+                                                "buckets_path": "factory>max_hs06"
+                                              } 
+                                          },
+                                        "running_hs06_space":
+                                          {
+                                            "sum_bucket":
+                                              {
+                                                "buckets_path": "factory>running_hs06"
                                               }
                                           }
                                       }
@@ -1128,42 +1181,42 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, timeRangeVO):
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>max_processors"
+                                        "buckets_path": "space>max_processors_space"
                                       }
                                   },
                                 "running_processors_site":
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>running_processors"
+                                        "buckets_path": "space>running_processors_space"
                                       }
                                   },
                                 "max_machines_site":
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>max_machines"
+                                        "buckets_path": "space>max_machines_space"
                                       }
                                   },
                                 "running_machines_site":
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>running_machines"
+                                        "buckets_path": "space>running_machines_space"
                                       }
                                   },
                                 "max_hs06_site":
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>max_hs06"
+                                        "buckets_path": "space>max_hs06_space"
                                       }
                                   },
                                 "running_hs06_site":
                                   {
                                     "sum_bucket":
                                       {
-                                        "buckets_path": "factory>running_hs06"
+                                        "buckets_path": "space>running_hs06_space"
                                       }
                                   }
                               }

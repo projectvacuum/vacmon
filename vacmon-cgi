@@ -952,7 +952,9 @@ except:
   timeSpan = (86400 / timeBuckets) * timeBuckets
   reload = True
   
-if splitSizeTimeRangeVO[2] == '':
+if reload:
+  timeEnd = ''
+elif splitSizeTimeRangeVO[2] == '':
   timeEnd = int(time.time())
 else:
   try:

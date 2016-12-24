@@ -1,6 +1,8 @@
 {
     "mappings" : {
       "factories" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
         "properties" : {
           "time_received" : {
             "type"   : "date",
@@ -114,6 +116,8 @@
         }
       },
       "machinetypes" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
         "properties" : {
           "time_received" : {
             "type"   : "date",
@@ -123,15 +127,15 @@
             "type" : "string",
             "index" : "not_analyzed"
           },
+          "daemon_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
           "factory" : {
             "type" : "string",
             "index" : "not_analyzed"
           },
           "fqan" : {
-            "type" : "string",
-            "index" : "not_analyzed"
-          },
-          "vo" : {
             "type" : "string",
             "index" : "not_analyzed"
           },
@@ -182,11 +186,11 @@
           "running_processors" : {
             "type" : "long"
           },
-          "daemon_version" : {
+          "vacquery_version" : {
             "type" : "string",
             "index" : "not_analyzed"
           },
-          "vacquery_version" : {
+          "vo" : {
             "type" : "string",
             "index" : "not_analyzed"
           }

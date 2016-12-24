@@ -46,10 +46,10 @@ import elasticsearch
 
 class VacMonStackedLine(pygal.StackedLine):
 
-  def __init__(self, timeStart, timeEnd, timeBuckets):
+  def __init__(self, timeSpan, timeEnd, timeBuckets):
         pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
 
-        self.x_labels = [ timeStart + (i + 0.5) * ((timeEnd - timeStart) / timeBuckets)  for i in range(0, timeBuckets) ]
+        self.x_labels = [ (timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets)) for i in range(0, timeBuckets) ]
 
   def _points(self, x_pos):
         # Unfilled series to be overlayed rather than stacked
@@ -92,7 +92,10 @@ def htmlFooter():
   print open('/var/www/vacmon/footer.html', 'r').read()
   print '</html>'
 
-def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
+def getBucketValue(obj):
+  return obj['value'] if obj['value'] else 0
+
+def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
 
   htmlHeader('VacMon ' + factoryName)
 
@@ -113,7 +116,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                 {
                   "filter":
                     [
-                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
                        { "term":  { "site":    "%s" } },
                        { "term":  { "space":   "%s" } },
                        { "term":  { "factory": "%s" } }
@@ -122,24 +125,20 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
               },
             "aggs" : 
               {
-                "factory_load_histogram": 
+                "factory_histogram": 
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "received_time",
+                        "field"          : "time_received",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
-                        "offset"         : %ld,
-                        "extended_bounds":
-                          {
-                            "min": %ld,
-                            "max": %ld
-                          }
+                        "offset"         : "+%lds",
+                        "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
                       {
-                        "time_average":         { "avg": { "field": "received_time"            } },
+                        "time_average":         { "avg": { "field": "time_received"        } },
                         "load_average":         { "avg": { "field": "load_average"         } },
                         "max_processors":       { "avg": { "field": "max_processors"       } },
                         "running_processors":   { "avg": { "field": "running_processors"   } },
@@ -156,7 +155,9 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                       }
                   }
               }                         
-           }""" % (timeStart, timeEnd, siteName, spaceName, factoryName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
     pprint.pprint(json.loads(factoriesSearch))
@@ -173,7 +174,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                 {
                   "filter":
                     [
-                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
                        { "term":  { "site":    "%s" } },
                        { "term":  { "space":   "%s" } },
                        { "term":  { "factory": "%s" } }
@@ -186,16 +187,12 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "received_time",
+                        "field"          : "time_received",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
-                        "offset"         : %ld,
-                        "extended_bounds":
-                          {
-                            "min": %ld,
-                            "max": %ld
-                          }
+                        "offset"         : "+%ld",
+                        "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
                       {
@@ -208,11 +205,13 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
                                      }
 
                           },                      
-                        "time_average": { "avg": { "field": "received_time" } }
+                        "time_average": { "avg": { "field": "time_received" } }
                       }
                   }
               }                         
-           }""" % (timeStart, timeEnd, siteName, spaceName, factoryName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
 #    pprint.pprint(json.loads(machinetypesSearch))
@@ -222,44 +221,46 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
 #    pprint.pprint(ms)
     print '</pre>'
     
-    loadAvgValues         = []
-    maxProcValues         = []
-    runningProcValues     = []
-    maxMachinesValues     = []
-    runningMachinesValues = []
-    maxHS06Values         = []
-    runningHS06Values     = []
-    rootDiskValues        = []
-    daemonDiskValues      = []
-    memUsedValues         = []
-    memFreeValues         = []
-    swapUsedValues        = []
-    swapFreeValues        = []
+    loadAvgValues         = [0.0] * timeBuckets
+    maxProcValues         = [0.0] * timeBuckets
+    runningProcValues     = [0.0] * timeBuckets
+    maxMachinesValues     = [0.0] * timeBuckets
+    runningMachinesValues = [0.0] * timeBuckets
+    maxHS06Values         = [0.0] * timeBuckets
+    runningHS06Values     = [0.0] * timeBuckets
+    rootDiskValues        = [0.0] * timeBuckets
+    daemonDiskValues      = [0.0] * timeBuckets
+    memUsedValues         = [0.0] * timeBuckets
+    memFreeValues         = [0.0] * timeBuckets
+    swapUsedValues        = [0.0] * timeBuckets
+    swapFreeValues        = [0.0] * timeBuckets
 
-    for i in fs['aggregations']['factory_load_histogram']['buckets']:
-       if i['key'] >= timeStart * 1000 and i['key'] < timeEnd * 1000:
-         loadAvgValues.append(i['load_average']['value'] if i['load_average']['value'] else 0)
-         maxProcValues.append(i['max_processors']['value'])
-         runningProcValues.append(i['running_processors']['value'])
+    for bucket in fs['aggregations']['factory_histogram']['buckets']:
+       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-         maxMachinesValues.append(i['max_machines']['value'])
-         runningMachinesValues.append(i['running_machines']['value'])
+       if i >= 0 and i < timeBuckets:
+         loadAvgValues[i]         = getBucketValue(bucket['load_average'])
+         maxProcValues[i]         = getBucketValue(bucket['max_processors'])
+         runningProcValues[i]     = getBucketValue(bucket['running_processors'])
 
-         maxHS06Values.append(i['max_hs06']['value'])
-         runningHS06Values.append(i['running_hs06']['value'])
+         maxMachinesValues[i]     = getBucketValue(bucket['max_machines'])
+         runningMachinesValues[i] = getBucketValue(bucket['running_machines'])
 
-         rootDiskValues.append(i['root_disk_avail_kb']['value'] / 1000)
-         daemonDiskValues.append(i['daemon_disk_avail_kb']['value'] / 1000)
+         maxHS06Values[i]         = getBucketValue(bucket['max_hs06'])
+         runningHS06Values[i]     = getBucketValue(bucket['running_hs06'])
 
-         memUsedValues.append(i['mem_used_kb']['value'] / 1024)
-         memFreeValues.append((i['mem_total_kb']['value'] - i['mem_used_kb']['value']) / 1024)
-         
-         swapUsedValues.append(i['swap_used_kb']['value'] / 1024)
-         swapFreeValues.append(i['swap_free_kb']['value'] / 1024)
+         rootDiskValues[i]        = getBucketValue(bucket['root_disk_avail_kb']) / 1000
+         daemonDiskValues[i]      = getBucketValue(bucket['daemon_disk_avail_kb']) / 1000
+
+         memUsedValues[i]         = getBucketValue(bucket['mem_used_kb']) / 1024
+         memFreeValues[i]         = (getBucketValue(bucket['mem_total_kb']) - getBucketValue(bucket['mem_used_kb'])) / 1024
+
+         swapUsedValues[i]        = getBucketValue(bucket['swap_used_kb']) / 1024
+         swapFreeValues[i]        = getBucketValue(bucket['swap_free_kb']) / 1024
 
     # Load/processors on this factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'CPU load & processors on factory ' + factoryName
     chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
     chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
@@ -268,7 +269,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
 
     # Machines on this factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Machines on factory ' + factoryName
     chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
     chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
@@ -276,7 +277,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
 
     # HS06 on this factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'HS06 on factory ' + factoryName
     chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
     chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
@@ -284,7 +285,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
 
     # Available disk on this factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Available disk on factory ' + factoryName
     chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
     chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
@@ -292,7 +293,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
 
     # Memory/swap on this factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Memory/swap on factory ' + factoryName
     chart.add('Mem used (MiB)', memUsedValues, fill=True, show_dots=False)
     chart.add('Mem free (MiB)', memFreeValues, fill=True, show_dots=False)
@@ -305,7 +306,7 @@ def oneFactory(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteNam
     
   htmlFooter()
   
-def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName):
+def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName):
 
   htmlHeader('VacMon ' + spaceName)
 
@@ -325,7 +326,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                  {
                    "filter":
                      [
-                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
                        { "term":  { "site": "%s"  } },
                        { "term":  { "space": "%s" } }
                      ]
@@ -346,11 +347,11 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "received_time",
+                        "field"          : "time_received",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
-                        "offset"         : %ld,
+                        "offset"         : "+%lds",
                         "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs": 
@@ -358,7 +359,8 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                         "factory":
                           {
                             "terms": { "field": "factory", "size" : 99999 },
-                            "aggs":  { "load_average":       { "avg": { "field" : "load_average"      } },
+                            "aggs":  { "time_average":       { "avg": { "field": "time_received"      } },
+                                       "load_average":       { "avg": { "field" : "load_average"      } },
                                        "max_processors":     { "avg": { "field" : "max_processors"    } },
                                        "running_processors": { "avg": { "field": "running_processors" } },
                                        "max_machines":       { "avg": { "field": "max_machines"       } },
@@ -377,7 +379,9 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                       }
                   }
               }
-           }""" % (timeStart, timeEnd, siteName, spaceName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, timeSpan / timeBuckets,
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
     pprint.pprint(json.loads(searchBody))
@@ -391,10 +395,10 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
     pprint.pprint(t)
     print '</pre>'
     
-    loadAvgValues     = []
-    maxProcValues     = []
-    maxMachinesValues = []
-    maxHS06Values     = []
+    loadAvgValues     = [0.0] * timeBuckets
+    maxProcValues     = [0.0] * timeBuckets
+    maxMachinesValues = [0.0] * timeBuckets
+    maxHS06Values     = [0.0] * timeBuckets
     
     factoryLoadAvgLists = {}
     factoryRunningProcLists = {}
@@ -402,28 +406,29 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
     factoryRunningHS06Lists = {}
 
     for j in t['aggregations']['factory_names']['buckets']:
-      factoryLoadAvgLists[j['key']] = []
-      factoryRunningProcLists[j['key']] = []
-      factoryRunningMachinesLists[j['key']] = []
-      factoryRunningHS06Lists[j['key']] = []
+      factoryLoadAvgLists[j['key']]         = [0.0] * timeBuckets
+      factoryRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      factoryRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      factoryRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for i in t['aggregations']['space_histogram']['buckets']:
-       if i['key'] >= timeStart * 1000 and i['key'] < timeEnd * 1000:
-         loadAvgValues.append(i['load_average_space']['value'] if i['load_average_space']['value'] else 0)
+    for bucket in t['aggregations']['space_histogram']['buckets']:
+       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-         maxProcValues.append(i['max_processors_space']['value'])
-         maxMachinesValues.append(i['max_machines_space']['value'])
-         maxHS06Values.append(i['max_hs06_space']['value'])
+       if i >= 0 and i < timeBuckets:
+         loadAvgValues[i]     = getBucketValue(bucket['load_average_space'])
+         maxProcValues[i]     = getBucketValue(bucket['max_processors_space'])
+         maxMachinesValues[i] = getBucketValue(bucket['max_machines_space'])
+         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_space'])
 
-         for j in i['factory']['buckets']:
-           factoryLoadAvgLists[j['key']].append(j['load_average']['value'])
-           factoryRunningProcLists[j['key']].append(j['running_processors']['value'])
-           factoryRunningMachinesLists[j['key']].append(j['running_machines']['value'])
-           factoryRunningHS06Lists[j['key']].append(j['running_hs06']['value'])
+         for j in bucket['factory']['buckets']:
+           factoryLoadAvgLists[j['key']][i]         = getBucketValue(j['load_average'])
+           factoryRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+           factoryRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+           factoryRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
 
     # CPU load per factory
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'CPU load in space ' + spaceName
 
     for j in t['aggregations']['factory_names']['buckets']:
@@ -432,12 +437,12 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running processors per factory
     
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Processors in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
@@ -450,7 +455,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
     
     # Running machines per factory
     
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Machines in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
@@ -463,7 +468,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
     
     # Running HS06 per factory
     
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'HS06 in space ' + spaceName
     for j in t['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
@@ -479,7 +484,7 @@ def oneSpace(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName,
     
   htmlFooter()
   
-def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
+def oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
 
   htmlHeader('VacMon ' + siteName)
 
@@ -497,7 +502,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                  {
                    "filter":
                      [
-                       { "range": { "received_time": { "from": %ld, "to": %ld } } },
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
                        { "match": { "site": "%s" } }
                      ]
                  }
@@ -517,11 +522,11 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "received_time",
+                        "field"          : "time_received",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
-                        "offset"         : %ld,
+                        "offset"         : "+%lds",
                         "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
@@ -530,7 +535,8 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                           {
                             "terms": { "field": "space", "size" : 99999 },
                             "aggs": { "factory": { "terms": { "field": "factory", "size" : 99999 },
-                                                   "aggs":  { "max_processors":     { "avg": { "field" : "max_processors"     } },
+                                                   "aggs":  { "time_average":       { "avg": { "field": "time_received"       } },
+                                                              "max_processors":     { "avg": { "field" : "max_processors"     } },
                                                               "running_processors": { "avg": { "field" : "running_processors" } },
                                                               "max_machines":       { "avg": { "field" : "max_machines"       } },
                                                               "running_machines":   { "avg": { "field" : "running_machines"   } },
@@ -555,7 +561,9 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                       }
                   }
               }
-           }""" % (timeStart, timeEnd, siteName, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, timeSpan / timeBuckets,
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
 #    pprint.pprint(json.loads(searchBody))
@@ -569,33 +577,35 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
 #    pprint.pprint(t)
     print '</pre>'
     
-    maxProcValues         = []
-    maxMachinesValues     = []
-    maxHS06Values         = []
+    maxProcValues         = [0.0] * timeBuckets
+    maxMachinesValues     = [0.0] * timeBuckets
+    maxHS06Values         = [0.0] * timeBuckets
 
     spaceRunningProcLists = {}
     spaceRunningMachinesLists = {}
     spaceRunningHS06Lists = {}
 
     for j in t['aggregations']['space_names']['buckets']:
-      spaceRunningProcLists[j['key']] = []
-      spaceRunningMachinesLists[j['key']] = []
-      spaceRunningHS06Lists[j['key']] = []
+      spaceRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      spaceRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      spaceRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for i in t['aggregations']['site_histogram']['buckets']:
-       if i['key'] >= timeStart * 1000 and i['key'] < timeEnd * 1000:
-         maxProcValues.append(i['max_processors_site']['value'])
-         maxMachinesValues.append(i['max_machines_site']['value'])
-         maxHS06Values.append(i['max_hs06_site']['value'])
+    for bucket in t['aggregations']['site_histogram']['buckets']:
+      i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+      
+      if i >= 0 and i < timeBuckets:
+         maxProcValues[i]     = getBucketValue(bucket['max_processors_site'])
+         maxMachinesValues[i] = getBucketValue(bucket['max_machines_site'])
+         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_site'])
 
-         for j in i['space']['buckets']:
-           spaceRunningProcLists[j['key']].append(j['running_processors_space']['value'])
-           spaceRunningMachinesLists[j['key']].append(j['running_machines_space']['value'])
-           spaceRunningHS06Lists[j['key']].append(j['running_hs06_space']['value'])
+         for j in bucket['space']['buckets']:
+           spaceRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_space'])
+           spaceRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_space'])
+           spaceRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_space'])
 
     # Processors running at this site
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running processors at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
@@ -609,7 +619,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
     
     # Machines running at this site
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running machines at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
@@ -623,7 +633,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
     
     # HS06 running at this site
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running HS06 at site ' + siteName
 
     for j in t['aggregations']['space_names']['buckets']:
@@ -640,7 +650,7 @@ def oneSite(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
     
   htmlFooter()
   
-def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
+def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 
   htmlHeader('VacMon ' + siteName)
 
@@ -658,7 +668,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                  {
                    "filter":
                      [
-                       { "range": { "received_time": { "from": %ld, "to":   %ld } } }
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } }
                      ]
                  }
               },
@@ -672,11 +682,11 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                   {
                     "date_histogram": 
                       { 
-                        "field"          : "received_time",
+                        "field"          : "time_received",
                         "interval"       : "%ds",
                         "format"         : "epoch_second",
                         "min_doc_count"  : 0,
-                        "offset"         : %ld,
+                        "offset"         : "+%lds",
                         "extended_bounds": { "min": %ld, "max": %ld }
                       },
                     "aggs":
@@ -695,6 +705,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                                             "terms": { "field": "factory", "size" : 99999 },
                                             "aggs":
                                               {                                                            
+                                                "time_average":       { "avg": { "field" : "time_received"      } },
                                                 "max_processors":     { "avg": { "field" : "max_processors"     } },
                                                 "running_processors": { "avg": { "field" : "running_processors" } },
                                                 "max_machines":       { "avg": { "field" : "max_machines"       } },
@@ -728,7 +739,9 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                       }
                   }
               }
-           }""" % (timeStart, timeEnd, (timeEnd - timeStart) / timeBuckets, timeStart * 1000, timeStart * 1000, timeEnd * 1000)
+           }""" % (timeEnd - timeSpan, timeEnd, timeSpan / timeBuckets, 
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
 #    pprint.pprint(json.loads(searchBody))
@@ -742,33 +755,35 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 #    pprint.pprint(t)
     print '</pre>'
     
-    maxProcValues         = []
-    maxMachinesValues     = []
-    maxHS06Values         = []
+    maxProcValues         = [0.0] * timeBuckets
+    maxMachinesValues     = [0.0] * timeBuckets
+    maxHS06Values         = [0.0] * timeBuckets
 
     siteRunningProcLists = {}
     siteRunningMachinesLists = {}
     siteRunningHS06Lists = {}
 
     for j in t['aggregations']['site_names']['buckets']:
-      siteRunningProcLists[j['key']] = []
-      siteRunningMachinesLists[j['key']] = []
-      siteRunningHS06Lists[j['key']] = []
+      siteRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      siteRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      siteRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for i in t['aggregations']['all_histogram']['buckets']:
-       if i['key'] >= timeStart * 1000 and i['key'] < timeEnd * 1000:
-         maxProcValues.append(i['max_processors_all']['value'])
-         maxMachinesValues.append(i['max_machines_all']['value'])
-         maxHS06Values.append(i['max_hs06_all']['value'])
+    for bucket in t['aggregations']['all_histogram']['buckets']:
+      i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-         for j in i['site']['buckets']:
-           siteRunningProcLists[j['key']].append(j['running_processors_site']['value'])
-           siteRunningMachinesLists[j['key']].append(j['running_machines_site']['value'])
-           siteRunningHS06Lists[j['key']].append(j['running_hs06_site']['value'])
+      if i >= 0 and i < timeBuckets:
+         maxProcValues[i]     = getBucketValue(bucket['max_processors_all'])
+         maxMachinesValues[i] = getBucketValue(bucket['max_machines_all'])
+         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_all'])
+
+         for j in bucket['site']['buckets']:
+           siteRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_site'])
+           siteRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_site'])
+           siteRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_site'])
 
     # Processors running at all sites
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running processors'
 
     for j in t['aggregations']['site_names']['buckets']:
@@ -777,12 +792,12 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # Machines running at all sites
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running machines'
 
     for j in t['aggregations']['site_names']['buckets']:
@@ -791,12 +806,12 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
+    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # HS06 running at all sites
 
-    chart = VacMonStackedLine(timeStart, timeEnd, timeBuckets)
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running HS06'
 
     for j in t['aggregations']['site_names']['buckets']:
@@ -805,7 +820,7 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
+    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
   except Exception as e:
@@ -816,6 +831,8 @@ def allSites(timeStart, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 #
 # PROGRAM MAIN
 #
+
+timeBuckets = 20
 
 vacmonVersion = open('/var/www/vacmon/VERSION','r').readline().split('=',1)[1].strip()
 requestURI    = os.environ['REQUEST_URI']
@@ -842,62 +859,61 @@ if not sizeTimeRangeVO:
   htmlFooter()
   sys.exit(0)
 
-# Parse timeRange
-splitSizeTimeRangeVO = sizeTimeRangeVO.split(':')
+# Parse size, time range, VO
+splitSizeTimeRangeVO = (sizeTimeRangeVO + ':::').split(':')
 
-if len(splitSizeTimeRangeVO) < 2:
-  print 'Status: 302 Found 1'
-  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
-  print
-  sys.exit(0)
+reload = False
 
 try:
   imageSize = int(splitSizeTimeRangeVO[0], 16)
 except:
-  print 'Status: 302 Found 2'
-  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
+  reload = True
+  imageSize = 600
+
+try:
+  timeSpan = int(splitSizeTimeRangeVO[1], 16)
+  
+  if timeSpan % timeBuckets != 0:
+    # Must be divisible by timeBuckets!      
+    timeSpan = (timeSpan / timeBuckets) * timeBuckets
+    reload = True
+except:
+  # Must be divisible by timeBuckets!
+  timeSpan = (86400 / timeBuckets) * timeBuckets
+  reload = True
+  
+if splitSizeTimeRangeVO[2] == '':
+  timeEnd = int(time.time())
+else:
+  try:
+    timeEnd = int(splitSizeTimeRangeVO[2], 16)
+  except:
+    timeEnd = ''
+    reload = True
+
+voName = splitSizeTimeRangeVO[3]
+
+if reload:
+  print 'Status: 302 Found'
+  print ('Location: http://vacmon.gridpp.ac.uk/%x:%x:%s:%s/' % (imageSize, timeSpan, str(timeEnd), voName)) + \
+         ((siteName    + '/') if siteName    else '') + \
+         ((spaceName   + '/') if spaceName   else '') + \
+         ((factoryName + '/') if factoryName else '')
   print
   sys.exit(0)
-
-timeRange = splitSizeTimeRangeVO[1]
-
-if len(splitSizeTimeRangeVO) > 2:
-  voName = splitSizeTimeRangeVO[2]
-else:
-  voName = None
-
-if '-' in timeRange:
-  try:
-    timeStart = int(timeRange.split('-')[0], 16)
-    timeEnd   = int(timeRange.split('-')[1], 16)
-  except:
-    print 'Status: 302 Found 3'
-    print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
-    print
-    sys.exit(0)
-    
-else:
-  try:
-    timeEnd   = int(time.time())
-    timeStart = timeEnd - int(timeRange, 16)
-  except:
-    print 'Status: 302 Found 4'
-    print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
-    print
-    sys.exit(0)
 
 # Pages with graphs
 
 if siteName and spaceName and factoryName:
-  oneFactory(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)
+  oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)
 
 elif siteName and spaceName:
-  oneSpace(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName, spaceName)
+  oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName)
 
 elif siteName:
-  oneSite(timeStart, timeEnd, 20, voName, sizeTimeRangeVO, siteName)
+  oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName)
 
 else:
-  allSites(timeStart, timeEnd, 20, voName, sizeTimeRangeVO)
+  allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
 sys.exit(0)

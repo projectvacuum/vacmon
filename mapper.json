@@ -2,7 +2,7 @@
     "mappings" : {
       "factories" : {
         "properties" : {
-          "received_time" : {
+          "time_received" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
@@ -115,7 +115,7 @@
       },
       "machinetypes" : {
         "properties" : {
-          "received_time" : {
+          "time_received" : {
             "type"   : "date",
             "format" : "epoch_second"
           },

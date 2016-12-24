@@ -108,6 +108,8 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
 
   try:
     es = elasticsearch.Elasticsearch()
+
+    # Do factories search and store results
   
     factoriesSearch =  """{
             "query":
@@ -160,67 +162,13 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                    (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
-    pprint.pprint(json.loads(factoriesSearch))
-
+#    pprint.pprint(json.loads(factoriesSearch))
+#
     fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
-
-    pprint.pprint(fs)
+#
+#    pprint.pprint(fs)
     print '</pre>'
-    
-    machinetypesSearch =  """{
-            "query":
-              {
-                "bool":
-                {
-                  "filter":
-                    [
-                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
-                       { "term":  { "site":    "%s" } },
-                       { "term":  { "space":   "%s" } },
-                       { "term":  { "factory": "%s" } }
-                    ]
-                }
-              },
-            "aggs" : 
-              {
-                "machinetype_histogram": 
-                  {
-                    "date_histogram": 
-                      { 
-                        "field"          : "time_received",
-                        "interval"       : "%ds",
-                        "format"         : "epoch_second",
-                        "min_doc_count"  : 0,
-                        "offset"         : "+%ld",
-                        "extended_bounds": { "min": %ld, "max": %ld }
-                      },
-                    "aggs":
-                      {
-                        "machinetype":
-                          {
-                            "terms": { "field": "machinetype", "size" : 99999 },
-                            "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
-                                       "running_machines":   { "avg": { "field": "running_machines"   } },
-                                       "running_hs06":       { "avg": { "field": "running_hs06"       } }
-                                     }
 
-                          },                      
-                        "time_average": { "avg": { "field": "time_received" } }
-                      }
-                  }
-              }                         
-           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
-                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
-                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
-
-    print '<pre>'
-#    pprint.pprint(json.loads(machinetypesSearch))
-
-#    ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
-
-#    pprint.pprint(ms)
-    print '</pre>'
-    
     loadAvgValues         = [0.0] * timeBuckets
     maxProcValues         = [0.0] * timeBuckets
     runningProcValues     = [0.0] * timeBuckets
@@ -257,6 +205,86 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
 
          swapUsedValues[i]        = getBucketValue(bucket['swap_used_kb']) / 1024
          swapFreeValues[i]        = getBucketValue(bucket['swap_free_kb']) / 1024
+
+    # Do machinetypes search and store results
+
+    machinetypesSearch =  """{
+            "query":
+              {
+                "bool":
+                {
+                  "filter":
+                    [
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } },
+                       { "term":  { "site":    "%s" } },
+                       { "term":  { "space":   "%s" } },
+                       { "term":  { "factory": "%s" } }
+                    ]
+                }
+              },
+            "aggs" : 
+              {
+                "machinetype_names":
+                  { 
+                    "terms": { "field": "machinetype", "size": 99999, "order": { "_term": "asc" } },
+                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
+                  },
+                "machinetype_histogram": 
+                  {
+                    "date_histogram": 
+                      { 
+                        "field"          : "time_received",
+                        "interval"       : "%ds",
+                        "format"         : "epoch_second",
+                        "min_doc_count"  : 0,
+                        "offset"         : "+%lds",
+                        "extended_bounds": { "min": %ld, "max": %ld }
+                      },
+                    "aggs":
+                      {
+                        "machinetype":
+                          {
+                            "terms": { "field": "machinetype", "size" : 99999 },
+                            "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
+                                       "running_machines":   { "avg": { "field": "running_machines"   } },
+                                       "running_hs06":       { "avg": { "field": "running_hs06"       } }
+                                     }
+
+                          },                      
+                        "time_average": { "avg": { "field": "time_received" } }
+                      }
+                  }
+              }                         
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000)
+
+    print '<pre>'
+    pprint.pprint(json.loads(machinetypesSearch))
+    ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
+
+    pprint.pprint(ms)
+    print '</pre>'
+
+    machinetypeRunningProcLists = {}
+    machinetypeRunningMachinesLists = {}
+    machinetypeRunningHS06Lists = {}
+
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      machinetypeRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      machinetypeRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      machinetypeRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
+
+    for bucket in ms['aggregations']['machinetype_histogram']['buckets']:
+       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+
+       if i >= 0 and i < timeBuckets:
+         for j in bucket['machinetype']['buckets']:
+           machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+           machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+           machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+    
+    # Turn stored results into charts
 
     # Load/processors on this factory
 
@@ -299,6 +327,48 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     chart.add('Mem free (MiB)', memFreeValues, fill=True, show_dots=False)
     chart.add('Swap used (MiB)', swapUsedValues, fill=True, show_dots=False)
     chart.add('Swap free (MiB)', swapFreeValues, fill=True, show_dots=False)
+    chart.htmlPrint()
+
+    # Running processors per machinetype
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors on factory ' + factoryName
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningProcLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running machines per machinetype
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines on factory ' + factoryName
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningMachinesLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running HS06 per machinetype
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 on factory ' + factoryName
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningHS06Lists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
 
   except Exception as e:

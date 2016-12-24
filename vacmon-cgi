@@ -167,6 +167,7 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
 #
 #    pprint.pprint(fs)
+    print 'fs took',fs['took']
     print '</pre>'
 
     loadAvgValues         = [0.0] * timeBuckets
@@ -264,6 +265,7 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
 
     pprint.pprint(ms)
+    print 'ms took',ms['took']
     print '</pre>'
 
     machinetypeRunningProcLists = {}

@@ -194,6 +194,106 @@
             "type" : "string",
             "index" : "not_analyzed"
           }
+        },
+      "machines" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
+        "properties" : {
+          "time_received" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "created_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cpu_percentage" : {
+            "type" : "double"
+          },
+          "cpu_seconds" : {
+            "type" : "long"
+          },
+          "daemon_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "factory" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "fqan" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "hs06" : {
+            "type" : "double"
+          },
+          "machine" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "machinetype" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "message_type" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "num_machines" : {
+            "type" : "long"
+          },
+          "num_processors" : {
+            "type" : "long"
+          },
+          "shutdown_message" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "shutdown_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "site" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "space" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "started_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "state" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "uuid" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "vacquery_version" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          },
+          "vo" : {
+            "type" : "string",
+            "index" : "not_analyzed"
+          }
         }
       }
     }

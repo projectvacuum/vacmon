@@ -61,6 +61,14 @@ def processMachinetype(curl, jsonMessage, id):
    curl.perform()
    print
 
+def processMachine(curl, jsonMessage, id):
+
+   curl.setopt(pycurl.URL, 'http://localhost:9200/vacmon/machines/' + id)
+   curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
+   curl.setopt(pycurl.POSTFIELDS, jsonMessage)
+   curl.perform()
+   print
+
 def vacmonListener():
 
    si = file('/dev/null', 'r')
@@ -202,7 +210,21 @@ def vacmonListener():
        try:
          processMachinetype(curl, json.dumps(message), id)
        except Exception as e:
-         vacmon.vacutils.logLine('machinetype_status processFactory() fails with %s' % str(e))
+         vacmon.vacutils.logLine('machinetype_status processMachinetype() fails with %s' % str(e))
+         
+          
+     elif 'message_type' in message and message['message_type'] == 'machine_status':
+
+       if 'fqan' in message and message['fqan'][0] == '/':
+         message['vo'] = message['fqan'].split('/')[1]
+
+       vacmon.vacutils.logLine(str(message))
+
+       # Now actually save the message
+       try:
+         processMachine(curl, json.dumps(message), id)
+       except Exception as e:
+         vacmon.vacutils.logLine('machine_status processMachine() fails with %s' % str(e))
          
           
    sys.exit(0) # if we break out of while loop then we exit

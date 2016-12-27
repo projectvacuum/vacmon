@@ -47,7 +47,7 @@ import elasticsearch
 class VacMonStackedLine(pygal.StackedLine):
 
   def __init__(self, timeSpan, timeEnd, timeBuckets):
-        pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30)
+        pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30, width=720)
 
         self.x_labels = [ (timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets)) for i in range(0, timeBuckets) ]
 
@@ -77,9 +77,9 @@ class VacMonStackedLine(pygal.StackedLine):
                     serie.interpolated = []
 
   def htmlPrint(self):
-        print '<figure>'
+        print '<div style="style="float: left"><figure>'
         print self.render()
-        print '</figure>'
+        print '</figure></div>'
 
 def htmlHeader(title):
   print 'Status: 200 OK'
@@ -98,12 +98,14 @@ def getBucketValue(obj):
 def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
 
   htmlHeader('VacMon ' + factoryName)
+  
+  shortFactoryName = factoryName.split('.')[0]
 
   print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/' + spaceName + '/">' + spaceName + '</a> ' +
-         '/ ' + factoryName.split('.')[0] + '</div>')
-                             
+         '/ ' + shortFactoryName + '</div>')
+
   print '<h1>Factory ' + factoryName + '</h1>'
 
   try:
@@ -126,7 +128,13 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                 }
               },
             "aggs" : 
-              {
+              {                
+                "factory_status":
+                  {
+                    "top_hits": { "sort": { "time_received": { "order": "desc" } }, 
+                                  "size": 1, 
+                                  "docvalue_fields" : ["boot_time"] }
+                  },              
                 "factory_histogram": 
                   {
                     "date_histogram": 
@@ -156,17 +164,17 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                         "swap_used_kb":         { "avg": { "field": "swap_used_kb"         } }
                       }
                   }
-              }                         
+              }
            }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
                    (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
-#    pprint.pprint(json.loads(factoriesSearch))
+    pprint.pprint(json.loads(factoriesSearch))
 #
     fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
 #
-#    pprint.pprint(fs)
+    pprint.pprint(fs)
     print 'fs took',fs['took']
     print '</pre>'
 
@@ -254,17 +262,51 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                           },                      
                         "time_average": { "avg": { "field": "time_received" } }
                       }
+                  },
+                "vo_names":
+                  { 
+                    "terms": { "field": "vo", "size": 99999, "order": { "_term": "asc" } },
+                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
+                  },
+                "vo_histogram": 
+                  {
+                    "date_histogram": 
+                      { 
+                        "field"          : "time_received",
+                        "interval"       : "%ds",
+                        "format"         : "epoch_second",
+                        "min_doc_count"  : 0,
+                        "offset"         : "+%lds",
+                        "extended_bounds": { "min": %ld, "max": %ld }
+                      },
+                    "aggs":
+                      {
+                        "vo":
+                          {
+                            "terms": { "field": "vo", "size" : 99999 },
+                            "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
+                                       "running_machines":   { "avg": { "field": "running_machines"   } },
+                                       "running_hs06":       { "avg": { "field": "running_hs06"       } }
+                                     }
+
+                          },                      
+                        "time_average": { "avg": { "field": "time_received" } }
+                      }
                   }
               }                         
-           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, timeSpan / timeBuckets, 
+           }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, 
+                   timeSpan / timeBuckets, 
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
+                   (timeEnd - timeSpan) * 1000, timeEnd * 1000,
+                   timeSpan / timeBuckets, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
                    (timeEnd - timeSpan) * 1000, timeEnd * 1000)
 
     print '<pre>'
-    pprint.pprint(json.loads(machinetypesSearch))
+#    pprint.pprint(json.loads(machinetypesSearch))
     ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
 
-    pprint.pprint(ms)
+#    pprint.pprint(ms)
     print 'ms took',ms['took']
     print '</pre>'
 
@@ -285,40 +327,48 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
            machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
            machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
            machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
-    
+
+    voRunningProcLists = {}
+    voRunningMachinesLists = {}
+    voRunningHS06Lists = {}
+
+    for j in ms['aggregations']['vo_names']['buckets']:
+      voRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      voRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      voRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
+
+    for bucket in ms['aggregations']['vo_histogram']['buckets']:
+       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+
+       if i >= 0 and i < timeBuckets:
+         for j in bucket['vo']['buckets']:
+           voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+           voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+           voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+
     # Turn stored results into charts
+
+    # Running HS06 per machinetype
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'HS06 on factory ' + shortFactoryName + ' per machinetype'
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningHS06Lists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
 
     # Load/processors on this factory
 
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'CPU load & processors on factory ' + factoryName
+    chart.title = 'CPU load & processors on factory ' + shortFactoryName
     chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
     chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
     chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # Machines on this factory
-
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines on factory ' + factoryName
-    chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
-    chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # HS06 on this factory
-
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 on factory ' + factoryName
-    chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
-    chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # Available disk on this factory
-
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Available disk on factory ' + factoryName
-    chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
-    chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
     chart.htmlPrint()
 
     # Memory/swap on this factory
@@ -331,10 +381,18 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     chart.add('Swap free (MiB)', swapFreeValues, fill=True, show_dots=False)
     chart.htmlPrint()
 
+    # Available disk on this factory
+
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Available disk on factory ' + factoryName
+    chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
+    chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
+    chart.htmlPrint()
+
     # Running processors per machinetype
     
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors on factory ' + factoryName
+    chart.title = 'Processors on factory ' + shortFactoryName + ' per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -348,7 +406,7 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     # Running machines per machinetype
     
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines on factory ' + factoryName
+    chart.title = 'Machines on factory ' + shortFactoryName + ' per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -359,19 +417,49 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running HS06 per machinetype
+    # Running processors per vo
     
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 on factory ' + factoryName
-    for j in ms['aggregations']['machinetype_names']['buckets']:
+    chart.title = 'Processors on factory ' + shortFactoryName + ' per VO'
+    for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
-                   machinetypeRunningHS06Lists[j['key']],
+                   voRunningProcLists[j['key']],
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
+
+    # Running machines per vo
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Machines on factory ' + shortFactoryName + ' per VO'
+    for j in ms['aggregations']['vo_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   voRunningMachinesLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+#    # Machines on this factory
+#
+#    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+#    chart.title = 'Machines on factory ' + factoryName
+#    chart.add('Running machines', runningMachinesValues, fill=True, show_dots=False)
+#    chart.add('Max machines',     maxMachinesValues, fill=False, show_dots=False)
+#    chart.htmlPrint()
+#
+#    # HS06 on this factory
+#
+#    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+#    chart.title = 'HS06 on factory ' + factoryName
+#    chart.add('Running HS06', runningHS06Values, fill=True, show_dots=False)
+#    chart.add('Max HS06',     maxHS06Values, fill=False, show_dots=False)
+#    chart.htmlPrint()
 
   except Exception as e:
     print str(e)
@@ -916,7 +1004,7 @@ if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghi
   print
   sys.exit(0)
 
-sizeTimeRangeVO, siteName, spaceName, factoryName = (requestURI + '////').split('/')[1:5]
+sizeTimeRangeVO, siteName, spaceName, factoryName, machinetypeName = (requestURI + '/////').split('/')[1:6]
 
 # Static pages: main page and documentation
 
@@ -970,13 +1058,17 @@ voName = splitSizeTimeRangeVO[3]
 if reload:
   print 'Status: 302 Found'
   print ('Location: http://vacmon.gridpp.ac.uk/%x:%x:%s:%s/' % (imageSize, timeSpan, str(timeEnd), voName)) + \
-         ((siteName    + '/') if siteName    else '') + \
-         ((spaceName   + '/') if spaceName   else '') + \
-         ((factoryName + '/') if factoryName else '')
+         ((siteName        + '/') if siteName        else '') + \
+         ((spaceName       + '/') if spaceName       else '') + \
+         ((factoryName     + '/') if factoryName     else '')
+#         + ((machinetypeName + '/') if machinetypeName else '')
   print
   sys.exit(0)
 
 # Pages with graphs
+
+#if siteName and spaceName and factoryName and machinetypeName:
+#  oneMachinetype(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName, machinetypeName)
 
 if siteName and spaceName and factoryName:
   oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)

@@ -144,6 +144,60 @@ a.lhlevel2:hover   { color: #FF0000; text-decoration: underline; }
 a.lhlevel2:active  { color: #FF0000; text-decoration: underline; }
 
 </style>
+<script language="JavaScript" src="/CalendarPopup.js"></script>
+<script language="JavaScript">var calFrom = new CalendarPopup();
+calFrom.setReturnFunction("setMultipleValues4");
+function setMultipleValues4(y,m,d) {
+        document.forms[0].dateFrom_year.value=y;
+        document.forms[0].dateFrom_month.selectedIndex=m;
+        for (var i=0; i<document.forms[0].dateFrom_date.options.length; i++)
+        {
+                if (document.forms[0].dateFrom_date.options[i].value==d) {
+                        document.forms[0].dateFrom_date.selectedIndex=i;
+                        }
+                }
+        }
+var calTo = new CalendarPopup();
+calTo.setReturnFunction("setMultipleValues5");
+function setMultipleValues5(y,m,d) {
+        document.forms[0].dateTo_year.value=y;
+        document.forms[0].dateTo_month.selectedIndex=m;
+        for (var i=0; i<document.forms[0].dateTo_date.options.length; i++) {
+                if (document.forms[0].dateTo_date.options[i].value==d) {
+                        document.forms[0].dateTo_date.selectedIndex=i;
+                        }
+                }
+        }
+function getDateString(y_obj,m_obj,d_obj) {
+        var y = y_obj.options[y_obj.selectedIndex].value;
+        var m = m_obj.options[m_obj.selectedIndex].value;
+        var d = d_obj.options[d_obj.selectedIndex].value;
+        if (y=="" || m=="") { return null; }
+        if (d=="") { d=1; }
+        return str= y+'-'+m+'-'+d;
+        }
+function timeButtonClick(imageSize, voName, uriTail) {
+
+        var timeStart = new Date(document.forms[0].dateFrom_year.value,
+                                 document.forms[0].dateFrom_month.value - 1,
+                                 document.forms[0].dateFrom_date.value,
+                                 document.forms[0].dateFrom_hour.value,
+                                 document.forms[0].dateFrom_minute.value, 0, 0);
+
+        var timeEnd   = new Date(document.forms[0].dateTo_year.value,
+                                 document.forms[0].dateTo_month.value - 1 ,
+                                 document.forms[0].dateTo_date.value,
+                                 document.forms[0].dateTo_hour.value,
+                                 document.forms[0].dateTo_minute.value, 0, 0);
+
+        var timeSpan = (timeEnd.getTime() - timeStart.getTime()) / 1000;
+
+        return '/' + imageSize.toString(16) + ':' +
+                     timeSpan.toString(16) + ':' +
+                     (timeEnd.getTime()/1000).toString(16) + ':' +
+                     voName + uriTail;
+        }
+</script>
 </head>
 <body>
 <div id="topstrip">

@@ -92,10 +92,75 @@ def htmlFooter():
   print open('/var/www/vacmon/footer.html', 'r').read()
   print '</html>'
 
+def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
+
+  if not timeEnd:
+    timeEnd = int(time.time())
+    
+  timeStart = timeEnd - timeSpan
+
+  structTimeStart = time.gmtime(timeStart)
+  structTimeEnd   = time.gmtime(timeEnd)
+
+  months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+  print '<br clear="right">'
+  print '<form name="example">'
+
+  print 'Last: '
+  for txt,seconds in [('Hour',3600), ('2hr',7200), ('4hr',14400), ('Day',86400),('Week',604800),('4week',2419200),('Year',31536000)]:
+    print '<input type="button" value="%s" onclick="window.location.href=\'/%x:%x::%s%s\'"> ' % \
+      (txt, imageSize, seconds, voName, uriTail)
+  
+  print '<br>Start: '
+  print '<input type="text" size="2" maxlength="2" name="dateFrom_hour" value="%02d">:<input ' % structTimeStart.tm_hour
+  print 'type="text" size="2" maxlength="2" name="dateFrom_minute" value="%02d"> ' % structTimeStart.tm_min
+    
+  print '<select name="dateFrom_date">'
+  for i in xrange(1,32):
+    print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeStart.tm_mday else '', i)
+
+  print '</select><select name="dateFrom_month">'
+  for i in xrange(1,13):
+    print '<option value="%d"%s>%s' % (i, ' selected' if i == structTimeStart.tm_mon else '', months[i])
+
+  print '</select><select name="dateFrom_year">'
+  for i in xrange(2016,2018):
+    print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeStart.tm_year else '', i)
+    
+  print '</select>'
+  print '<a href="#" onClick="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" TITLE="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" NAME="anchorFrom" ID="anchorFrom"><img src="/cal20px.png" align="absmiddle" width="20" height="20"></A>'
+   
+   
+  print '&nbsp; &nbsp; Finish:'
+  print '<input type="text" size="2" maxlength="2" name="dateTo_hour" value="%02d">:<input ' % structTimeEnd.tm_hour
+  print 'type="text" size="2" maxlength="2" name="dateTo_minute" value="%02d"> ' % structTimeEnd.tm_min
+    
+  print '<select name="dateTo_date">'
+  for i in xrange(1,32):
+    print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeEnd.tm_mday else '', i)
+
+  print '</select><select name="dateTo_month">'
+  for i in xrange(1,13):
+    print '<option value="%d"%s>%s' % (i, ' selected' if i == structTimeEnd.tm_mon else '', months[i])
+
+  print '</select><select name="dateTo_year">'
+  for i in xrange(2016,2018):
+    print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeEnd.tm_year else '', i)
+    
+  print '</select>'
+  print '<a href="#" onClick="calTo.showCalendar(\'anchorTo\',getDateString(document.forms[0].dateTo_year,document.forms[0].dateTo_month,document.forms[0].dateTo_date)); return false;" TITLE="calTo.showCalendar(\'anchorTo\',getDateString(document.forms[0].dateTo_year,document.forms[0].dateTo_month,document.forms[0].dateTo_date)); return false;" NAME="anchorTo" ID="anchorTo"><img src="/cal20px.png" align="absmiddle" width="20" height="20"></A>'
+
+  print '<input type="button" value="Update" onclick="window.location.href=timeButtonClick(%d,\'%s\',\'%s\')">' % (imageSize, voName, uriTail)
+  print '</form>'
+
+
+#  print '<DIV ID="testdiv1" STYLE="position:absolute;visibility:hidden;background-color:white;layer-background-color:white;"></DIV>'
+
 def getBucketValue(obj):
   return obj['value'] if obj['value'] else 0
 
-def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
+def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName):
 
   factoryFields = [ 
                     ("time_received",            "Time received",           "time"  ),
@@ -125,13 +190,18 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                   ]
 
   htmlHeader('VacMon ' + factoryName)
-  
+
   shortFactoryName = factoryName.split('.')[0]
 
   print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/' + spaceName + '/">' + spaceName + '</a> ' +
          '/ ' + shortFactoryName + '</div>')
+
+  htmlSelector(imageSize, timeSpan, timeEnd, voName, '/' + siteName + '/' + spaceName + '/' + factoryName + '/')
+
+  if not timeEnd:
+    timeEnd = int(time.time())
 
   print '<h1>Factory ' + factoryName + '</h1>'
 
@@ -199,11 +269,11 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets))
 
     print '<pre>'
-    pprint.pprint(json.loads(factoriesSearch))
+#    pprint.pprint(json.loads(factoriesSearch))
 #
     fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
 #
-    pprint.pprint(fs)
+ #   pprint.pprint(fs)
     print 'fs took',fs['took']
     print '</pre>'
 
@@ -506,13 +576,18 @@ def oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName
     
   htmlFooter()
   
-def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName):
+def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName):
 
   htmlHeader('VacMon ' + spaceName)
 
   print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
          '/ ' + spaceName + '</div>')
+         
+  htmlSelector(imageSize, timeSpan, timeEnd, voName, '/' + siteName + '/' + spaceName + '/')
+
+  if not timeEnd:
+    timeEnd = int(time.time())
                              
   print '<h1>Space ' + spaceName + '</h1>'
 
@@ -536,12 +611,12 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
               {
                 "factory_names":
                   {
-                    "terms":
-                      {
-                        "field": "factory",
-                        "size" : 99999,
-                        "order" : { "_term" : "asc" }
-                      }
+                    "terms": { "field": "factory", "size" : 99999, "order" : { "_term" : "asc" } }
+                  },
+                "daemon_version":
+                  {
+                    "terms": { "field": "daemon_version", "size" : 99999, "order" : { "sum_running_machines" : "desc" } },
+                    "aggs": { "sum_running_machines": { "sum": { "field": "running_machines" } } }                    
                   },
                 "factory_histogram": 
                   {
@@ -582,7 +657,7 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
     print '<pre>'
-#    pprint.pprint(json.loads(factoriesSearch))
+    pprint.pprint(json.loads(factoriesSearch))
 
     fs = es.search(
           index    = 'vacmon',
@@ -590,7 +665,7 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
           size     = 0,
           body     = factoriesSearch)
 
-#    pprint.pprint(fs)
+    pprint.pprint(fs)
     print 'fs took',fs['took']
     print '</pre>'
     
@@ -623,7 +698,7 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
            factoryLoadAvgLists[j['key']][i]         = getBucketValue(j['load_average'])
            factoryRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
            factoryRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           factoryRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+           factoryRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
 
     machinetypesSearch =  """{
             "query": 
@@ -726,7 +801,7 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
     print '<pre>'
-    pprint.pprint(json.loads(machinetypesSearch))
+#    pprint.pprint(json.loads(machinetypesSearch))
 
     ms = es.search(
           index       = 'vacmon',
@@ -747,7 +822,7 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
           size        = 0,
           body        = machinetypesSearch)
 
-    pprint.pprint(ms)
+#    pprint.pprint(ms)
     print 'ms took',ms['took']
     print '</pre>'
 
@@ -929,11 +1004,16 @@ def oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, 
     
   htmlFooter()
   
-def oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
+def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
 
   htmlHeader('VacMon ' + siteName)
 
   print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> / ' + siteName + '</div>')
+                             
+  htmlSelector(imageSize, timeSpan, timeEnd, voName, '/' + siteName + '/')
+
+  if not timeEnd:
+    timeEnd = int(time.time())
                              
   print '<h1>Site ' + siteName + '</h1>'
 
@@ -1118,7 +1198,7 @@ def oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
     print '<pre>'
-    pprint.pprint(json.loads(machinetypesSearch))
+#    pprint.pprint(json.loads(machinetypesSearch))
 
     ms = es.search(
           index    = 'vacmon',
@@ -1129,13 +1209,12 @@ def oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
                          'aggregations.vo_histogram.buckets.vo.buckets.key',
                          'aggregations.vo_histogram.buckets.vo.buckets.running*',
                          'took',
-                         'aggregations.machinetype_names.**',
                          'aggregations.vo_names.**'
                         ],
           size     = 0,
           body     = machinetypesSearch)
 
-    pprint.pprint(ms)
+#    pprint.pprint(ms)
     print 'ms took',ms['took']
     print '</pre>'
 
@@ -1246,18 +1325,23 @@ def oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName):
     
   htmlFooter()
   
-def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
+def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
 
   htmlHeader('VacMon ' + siteName)
 
   print ('<div class="breadcrumbs">VacMon</div>')
                              
+  htmlSelector(imageSize, timeSpan, timeEnd, voName, '/')
+
+  if not timeEnd:
+    timeEnd = int(time.time())
+
   print '<h1>All sites</h1>'
 
   try:
     es = elasticsearch.Elasticsearch()
   
-    searchBody =  """{
+    factoriesSearch =  """{
             "query": 
               {
                 "bool":
@@ -1272,7 +1356,8 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
               {
                 "site_names":
                   {
-                    "terms": { "field": "site", "size" : 99999, "order" : { "_term" : "asc" } }
+                    "terms": { "field": "site", "size" : 99999, "order" : { "sum_running_machines" : "desc" } },
+                               "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
                   },
                 "all_histogram":
                   {
@@ -1340,11 +1425,11 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
     print '<pre>'
 #    pprint.pprint(json.loads(searchBody))
 
-    t = es.search(
+    fs = es.search(
           index    = 'vacmon',
           doc_type = 'factories',
           size     = 0,
-          body     = searchBody)
+          body     = factoriesSearch)
 
 #    pprint.pprint(t)
     print '</pre>'
@@ -1357,12 +1442,12 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
     siteRunningMachinesLists = {}
     siteRunningHS06Lists = {}
 
-    for j in t['aggregations']['site_names']['buckets']:
+    for j in fs['aggregations']['site_names']['buckets']:
       siteRunningProcLists[j['key']]     = [0.0] * timeBuckets
       siteRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       siteRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in t['aggregations']['all_histogram']['buckets']:
+    for bucket in fs['aggregations']['all_histogram']['buckets']:
       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
       if i >= 0 and i < timeBuckets:
@@ -1375,12 +1460,129 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
            siteRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_site'])
            siteRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_site'])
 
+    machinetypesSearch =  """{
+            "query": 
+              {
+                "bool":
+                 {
+                   "filter":
+                     [
+                       { "range": { "time_received": { "from": %ld, "to": %ld } } }
+                     ]
+                 }
+              },
+            "aggs": 
+              {
+                "vo_names":
+                  { 
+                    "terms": { "field": "vo", "size": 99999, "order": { "sum_running_machines": "desc" } },
+                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
+                  },
+                "vo_histogram": 
+                  {
+                    "date_histogram":
+                      { 
+                        "field"          : "time_received",
+                        "interval"       : "%ds",
+                        "format"         : "epoch_second",
+                        "min_doc_count"  : 1,
+                        "offset"         : "+%lds"
+                      },
+                    "aggs":
+                      {                      
+                        "vo":
+                          {
+                            "terms": { "field": "vo", "size" : 99999 },
+                            "aggs":  { "running_processors": { "sum_bucket": { "buckets_path": "site>running_processors" } },
+                                       "running_machines":   { "sum_bucket": { "buckets_path": "site>running_machines"   } },
+                                       "running_hs06":       { "sum_bucket": { "buckets_path": "site>running_hs06"       } },
+                                       "site":
+                                         {
+                                           "terms": { "field": "site", "size" : 99999 },
+                                           "aggs":  { "running_processors": { "sum_bucket": { "buckets_path": "space>running_processors" } },
+                                                      "running_machines":   { "sum_bucket": { "buckets_path": "space>running_machines"   } },
+                                                      "running_hs06":       { "sum_bucket": { "buckets_path": "space>running_hs06"       } },
+                                                      "space":
+                                                        {
+                                                          "terms": { "field": "space", "size": 99999 },
+                                                          "aggs": { "running_processors": { "sum_bucket": { "buckets_path": "machinetype>running_processors" } },
+                                                                    "running_machines":   { "sum_bucket": { "buckets_path": "machinetype>running_machines"   } },
+                                                                    "running_hs06":       { "sum_bucket": { "buckets_path": "machinetype>running_hs06"       } },
+                                                                    "machinetype":
+                                                                      {
+                                                                        "terms": { "field": "machinetype", "size" : 99999 },
+                                                                        "aggs":  { "running_processors": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
+                                                                                   "running_machines":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
+                                                                                   "running_hs06":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } },
+                                                                                   "factory":
+                                                                                     {
+                                                                                       "terms": { "field": "factory", "size": 99999 },
+                                                                                       "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
+                                                                                                  "running_machines":   { "avg": { "field": "running_machines"   } },
+                                                                                                  "running_hs06":       { "avg": { "field": "running_hs06"       } }
+                                                                                                }
+                                                                                     }
+                                                                                 }
+                                                                      }
+                                                                  }
+                                                        }          
+                                                    }              
+                                                                  
+                                         }
+                                     }
+                          }
+                      }
+                  }
+              }
+           }""" % (timeEnd - timeSpan, timeEnd,
+                   timeSpan / timeBuckets,
+                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
+
+    print '<pre>'
+#    pprint.pprint(json.loads(machinetypesSearch))
+
+    ms = es.search(
+          index    = 'vacmon',
+          doc_type = 'machinetypes',
+          filter_path = [
+                         'aggregations.vo_histogram.buckets.key',
+                         'aggregations.vo_histogram.buckets.running*',
+                         'aggregations.vo_histogram.buckets.vo.buckets.key',
+                         'aggregations.vo_histogram.buckets.vo.buckets.running*',
+                         'took',
+                         'aggregations.vo_names.**'
+                        ],
+          size     = 0,
+          body     = machinetypesSearch)
+
+#    pprint.pprint(ms)
+    print 'ms took',ms['took']
+    print '</pre>'
+
+    voRunningProcLists = {}
+    voRunningMachinesLists = {}
+    voRunningHS06Lists = {}
+
+    for j in ms['aggregations']['vo_names']['buckets']:
+      voRunningProcLists[j['key']]     = [0.0] * timeBuckets
+      voRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+      voRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
+
+    for bucket in ms['aggregations']['vo_histogram']['buckets']:
+       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+
+       if i >= 0 and i < timeBuckets:
+         for j in bucket['vo']['buckets']:
+           voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+           voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+           voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
+
     # Processors running at all sites
 
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running processors'
 
-    for j in t['aggregations']['site_names']['buckets']:
+    for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningProcLists[j['key']],
                       fill=True, 
@@ -1394,7 +1596,7 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running machines'
 
-    for j in t['aggregations']['site_names']['buckets']:
+    for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningMachinesLists[j['key']],
                       fill=True, 
@@ -1408,11 +1610,53 @@ def allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO):
     chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running HS06'
 
-    for j in t['aggregations']['site_names']['buckets']:
+    for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningHS06Lists[j['key']],
                       fill=True, 
                       show_dots=False)
+
+    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running processors per VO at all sites
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Processors ' + siteName + ' per VO'
+    for j in ms['aggregations']['vo_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   voRunningProcLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running machines per VO at all sites
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Machines ' + siteName + ' per VO'
+    for j in ms['aggregations']['vo_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   voRunningMachinesLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running HS06 per VO at all sites
+    
+    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
+    chart.title = 'HS06 ' + siteName + ' per VO'
+    for j in ms['aggregations']['vo_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   voRunningHS06Lists[j['key']],
+                   fill=True, 
+                   show_dots=False )
 
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
@@ -1479,7 +1723,7 @@ except:
 if reload:
   timeEnd = ''
 elif splitSizeTimeRangeVO[2] == '':
-  timeEnd = int(time.time())
+  timeEnd = ''
 else:
   try:
     timeEnd = int(splitSizeTimeRangeVO[2], 16)
@@ -1495,25 +1739,21 @@ if reload:
          ((siteName        + '/') if siteName        else '') + \
          ((spaceName       + '/') if spaceName       else '') + \
          ((factoryName     + '/') if factoryName     else '')
-#         + ((machinetypeName + '/') if machinetypeName else '')
   print
   sys.exit(0)
 
 # Pages with graphs
 
-#if siteName and spaceName and factoryName and machinetypeName:
-#  oneMachinetype(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName, machinetypeName)
-
 if siteName and spaceName and factoryName:
-  oneFactory(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)
+  oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName, factoryName)
 
 elif siteName and spaceName:
-  oneSpace(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName)
+  oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName, spaceName)
 
 elif siteName:
-  oneSite(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName)
+  oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, siteName)
 
 else:
-  allSites(timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
+  allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
 sys.exit(0)

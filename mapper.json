@@ -194,7 +194,8 @@
             "type" : "string",
             "index" : "not_analyzed"
           }
-        },
+        }
+      },
       "machines" : {
         "_source": { "enabled": false },
         "_all": { "enabled": false },

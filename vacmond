@@ -211,7 +211,6 @@ def vacmonListener():
          processMachinetype(curl, json.dumps(message), id)
        except Exception as e:
          vacmon.vacutils.logLine('machinetype_status processMachinetype() fails with %s' % str(e))
-         
           
      elif 'message_type' in message and message['message_type'] == 'machine_status':
 
@@ -225,7 +224,6 @@ def vacmonListener():
          processMachine(curl, json.dumps(message), id)
        except Exception as e:
          vacmon.vacutils.logLine('machine_status processMachine() fails with %s' % str(e))
-         
           
    sys.exit(0) # if we break out of while loop then we exit
 

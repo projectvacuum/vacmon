@@ -46,10 +46,10 @@ import elasticsearch
 
 class VacMonStackedLine(pygal.StackedLine):
 
-  def __init__(self, timeSpan, timeEnd, timeBuckets):
-        pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30, width=720)
-
-        self.x_labels = [ (timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets)) for i in range(0, timeBuckets) ]
+  def __init__(self, imageSize, timeSpan, timeEnd, timeBuckets):
+        self.imageSize = imageSize
+        pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30, width=720, height=720)
+        self.x_labels = [ time.strftime('%b-%d %H:%M', time.localtime(timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets))) for i in range(0, timeBuckets) ]
 
   def _points(self, x_pos):
         # Unfilled series to be overlayed rather than stacked
@@ -77,9 +77,9 @@ class VacMonStackedLine(pygal.StackedLine):
                     serie.interpolated = []
 
   def htmlPrint(self):
-        print '<div style="style="float: left"><figure>'
+        print '<a href="' + self.render_data_uri() + '"><figure style="width:%dpx; display: inline-block">' % self.imageSize
         print self.render()
-        print '</figure></div>'
+        print '</figure></a> '
 
 def htmlHeader(title):
   print 'Status: 200 OK'
@@ -94,25 +94,28 @@ def htmlFooter():
 
 def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
 
-  if not timeEnd:
-    timeEnd = int(time.time())
-    
-  timeStart = timeEnd - timeSpan
+  months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  imageSizes = [ 150, 300, 600, 900 ]
 
+  print '<br clear="right">'
+
+  print '<form name="example"><table cellspacing="5" align="center">'
+  
+  if imageSize not in imageSizes:
+    imageSizes.append(imageSize)
+    imageSizes.sort()
+
+  if timeEnd:
+    timeEndStr = '%x' % timeEnd
+  else:
+    timeEndStr = ''
+    timeEnd = int(time.time())
+      
+  timeStart       = timeEnd - timeSpan
   structTimeStart = time.gmtime(timeStart)
   structTimeEnd   = time.gmtime(timeEnd)
 
-  months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-
-  print '<br clear="right">'
-  print '<form name="example">'
-
-  print 'Last: '
-  for txt,seconds in [('Hour',3600), ('2hr',7200), ('4hr',14400), ('Day',86400),('Week',604800),('4week',2419200),('Year',31536000)]:
-    print '<input type="button" value="%s" onclick="window.location.href=\'/%x:%x::%s%s\'"> ' % \
-      (txt, imageSize, seconds, voName, uriTail)
-  
-  print '<br>Start: '
+  print '<tr><td>Start: '
   print '<input type="text" size="2" maxlength="2" name="dateFrom_hour" value="%02d">:<input ' % structTimeStart.tm_hour
   print 'type="text" size="2" maxlength="2" name="dateFrom_minute" value="%02d"> ' % structTimeStart.tm_min
     
@@ -131,8 +134,7 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
   print '</select>'
   print '<a href="#" onClick="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" TITLE="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" NAME="anchorFrom" ID="anchorFrom"><img src="/cal20px.png" align="absmiddle" width="20" height="20"></A>'
    
-   
-  print '&nbsp; &nbsp; Finish:'
+  print '</td><td style="text-align: right">Finish:'
   print '<input type="text" size="2" maxlength="2" name="dateTo_hour" value="%02d">:<input ' % structTimeEnd.tm_hour
   print 'type="text" size="2" maxlength="2" name="dateTo_minute" value="%02d"> ' % structTimeEnd.tm_min
     
@@ -152,10 +154,25 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
   print '<a href="#" onClick="calTo.showCalendar(\'anchorTo\',getDateString(document.forms[0].dateTo_year,document.forms[0].dateTo_month,document.forms[0].dateTo_date)); return false;" TITLE="calTo.showCalendar(\'anchorTo\',getDateString(document.forms[0].dateTo_year,document.forms[0].dateTo_month,document.forms[0].dateTo_date)); return false;" NAME="anchorTo" ID="anchorTo"><img src="/cal20px.png" align="absmiddle" width="20" height="20"></A>'
 
   print '<input type="button" value="Update" onclick="window.location.href=timeButtonClick(%d,\'%s\',\'%s\')">' % (imageSize, voName, uriTail)
-  print '</form>'
+  print '</td></tr>'
 
 
-#  print '<DIV ID="testdiv1" STYLE="position:absolute;visibility:hidden;background-color:white;layer-background-color:white;"></DIV>'
+  print '<tr><td>Image size: '
+  
+  for i in imageSizes:
+    print '<input type="button" value="%d" onclick="window.location.href=\'/%x:%x:%s:%s%s\'"> ' % \
+      (i, i, timeSpan, timeEndStr, voName, uriTail)
+    
+  print '</td><td align="right">'
+
+  print 'Last: '
+  for txt,seconds in [('Hour',3600), ('2hr',7200), ('4hr',14400), ('Day',86400),('Week',604800),('4week',2419200),('Year',31536000)]:
+    print '<input type="button" value="%s" onclick="window.location.href=\'/%x:%x::%s%s\'"> ' % \
+      (txt, imageSize, seconds, voName, uriTail)
+      
+  print '</td></tr>'
+
+  print '</table></form>'
 
 def getBucketValue(obj):
   return obj['value'] if obj['value'] else 0
@@ -191,12 +208,10 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
 
   htmlHeader('VacMon ' + factoryName)
 
-  shortFactoryName = factoryName.split('.')[0]
-
   print ('<div class="breadcrumbs"><a href="/' + sizeTimeRangeVO + '/">VacMon</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/">' + siteName + '</a> ' +
          '/ <a href="/' + sizeTimeRangeVO + '/' + siteName + '/' + spaceName + '/">' + spaceName + '</a> ' +
-         '/ ' + shortFactoryName + '</div>')
+         '/ ' + factoryName.split('.')[0] + '</div>')
 
   htmlSelector(imageSize, timeSpan, timeEnd, voName, '/' + siteName + '/' + spaceName + '/' + factoryName + '/')
 
@@ -268,14 +283,16 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
                    timeSpan / timeBuckets, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets))
 
-    print '<pre>'
+
+#    print '<pre>'
 #    pprint.pprint(json.loads(factoriesSearch))
 #
     fs = es.search(index = 'vacmon', doc_type = 'factories', size = 0, body = factoriesSearch)
+    print '<!-- fs took %d-->' % fs['took']
 #
  #   pprint.pprint(fs)
-    print 'fs took',fs['took']
-    print '</pre>'
+#    print 'fs took',fs['took']
+#    print '</pre>'
 
     loadAvgValues         = [0.0] * timeBuckets
     maxProcValues         = [0.0] * timeBuckets
@@ -360,57 +377,20 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
                           },
                         "time_average": { "avg": { "field": "time_received" } }
                       }
-                  },
-                "vo_names":
-                  { 
-                    "terms": { "field": "vo", "size": 99999, "order": { "sum_running_machines": "desc" } },
-                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
-                  },
-                "vo_histogram": 
-                  {
-                    "date_histogram": 
-                      { 
-                        "field"          : "time_received",
-                        "interval"       : "%ds",
-                        "format"         : "epoch_second",
-                        "min_doc_count"  : 1,
-                        "offset"         : "+%lds"
-                      },
-                    "aggs":
-                      {
-                        "vo":
-                          {
-                            "terms": { "field": "vo", "size" : 99999 },
-                            "aggs":  { "running_processors_vo": { "sum_bucket": { "buckets_path": "machinetype>running_processors" } },
-                                       "running_machines_vo":   { "sum_bucket": { "buckets_path": "machinetype>running_machines"   } },
-                                       "running_hs06_vo":       { "sum_bucket": { "buckets_path": "machinetype>running_hs06"       } },
-                                       "machinetype":
-                                        {
-                                          "terms": { "field": "machinetype", "size" : 99999 },
-                                          "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
-                                                     "running_machines":   { "avg": { "field": "running_machines"   } },
-                                                     "running_hs06":       { "avg": { "field": "running_hs06"       } }
-                                                   }
-                                        }
-                                     }
-                          },
-                        "time_average": { "avg": { "field": "time_received" } }
-                      }
                   }
               }                         
            }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, factoryName, 
                    timeSpan / timeBuckets, 
-                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
-                   timeSpan / timeBuckets, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(machinetypesSearch))
     ms = es.search(index = 'vacmon', doc_type = 'machinetypes', size = 0, body = machinetypesSearch)
+    print '<!-- ms took %d -->' % ms['took']
 
 #    pprint.pprint(ms)
-    print 'ms took',ms['took']
-    print '</pre>'
+#    print 'ms took',ms['took']
+#    print '</pre>'
 
     machinetypeRunningProcLists = {}
     machinetypeRunningMachinesLists = {}
@@ -430,30 +410,13 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
            machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
            machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
 
-    voRunningProcLists = {}
-    voRunningMachinesLists = {}
-    voRunningHS06Lists = {}
-
-    for j in ms['aggregations']['vo_names']['buckets']:
-      voRunningProcLists[j['key']]     = [0.0] * timeBuckets
-      voRunningMachinesLists[j['key']] = [0.0] * timeBuckets
-      voRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
-
-    for bucket in ms['aggregations']['vo_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
-
-       if i >= 0 and i < timeBuckets:
-         for j in bucket['vo']['buckets']:
-           voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_vo'])
-           voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_vo'])
-           voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_vo'])
-
     # Turn stored results into charts
+    print '<div style="text-align: center; width: 100%">'
 
     # Running HS06 per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 on factory ' + shortFactoryName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -466,8 +429,8 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
 
     # Load/processors on this factory
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'CPU load & processors on factory ' + shortFactoryName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'CPU load & running processors'
     chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
     chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
     chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
@@ -475,8 +438,8 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
 
     # Memory/swap on this factory
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Memory/swap on factory ' + factoryName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Memory/swap'
     chart.add('Mem used (MiB)', memUsedValues, fill=True, show_dots=False)
     chart.add('Mem free (MiB)', memFreeValues, fill=True, show_dots=False)
     chart.add('Swap used (MiB)', swapUsedValues, fill=True, show_dots=False)
@@ -485,16 +448,16 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
 
     # Available disk on this factory
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Available disk on factory ' + factoryName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Available disk'
     chart.add('Root disk free (MB)', rootDiskValues, fill=True, show_dots=False)
     chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
     chart.htmlPrint()
 
     # Running processors per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors on factory ' + shortFactoryName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running rocessors per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -507,8 +470,8 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
 
     # Running machines per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines on factory ' + shortFactoryName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -519,37 +482,13 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running processors per vo
-    
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors on factory ' + shortFactoryName + ' per VO'
-    for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   voRunningProcLists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # Running machines per vo
-    
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines on factory ' + shortFactoryName + ' per VO'
-    for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   voRunningMachinesLists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
-    chart.htmlPrint()
+    print '</div>'
 
     # Table of most recent result for this factory
     
-    print '<table>'
+    print '<h2>Most recent update from %s</h2>' % factoryName
+
+    print '<table style="margin: 0px auto; border-collapse: collapse; border: 1px solid #196FA6;">'
     
     for i in factoryFields:
     
@@ -565,9 +504,9 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
        s = str(fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0])
 
      try:
-       print '<tr><td>%s</td><td>%s</td></tr>' % ( i[1], s )
+       print '<tr><td style="border: 1px solid #196FA6; padding: 5px">%s</td><td style="border: 1px solid #196FA6; padding: 5px">%s</td></tr>' % ( i[1], s )
      except Exception as e:
-       print '<tr><td>%s</td></tr>' % str(e)
+       print '<tr><td style="border: 1px solid #196FA6; padding: 5px">%s</td></tr>' % str(e)
       
     print '</table>'
 
@@ -656,8 +595,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
            }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
-    pprint.pprint(json.loads(factoriesSearch))
+#    print '<pre>'
+#    pprint.pprint(json.loads(factoriesSearch))
 
     fs = es.search(
           index    = 'vacmon',
@@ -665,9 +604,11 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
           size     = 0,
           body     = factoriesSearch)
 
-    pprint.pprint(fs)
-    print 'fs took',fs['took']
-    print '</pre>'
+    print '<!-- fs took %d -->' % fs['took']
+
+#    pprint.pprint(fs)
+#    print 'fs took',fs['took']
+#    print '</pre>'
     
     loadAvgValues     = [0.0] * timeBuckets
     maxProcValues     = [0.0] * timeBuckets
@@ -748,59 +689,13 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                                     }
                           }
                       }
-                  },
-                "vo_names":
-                  { 
-                    "terms": { "field": "vo", "size": 99999, "order": { "sum_running_machines": "desc" } },
-                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
-                  },
-                "vo_histogram": 
-                  {
-                    "date_histogram":
-                      { 
-                        "field"          : "time_received",
-                        "interval"       : "%ds",
-                        "format"         : "epoch_second",
-                        "min_doc_count"  : 1,
-                        "offset"         : "+%lds"
-                      },
-                    "aggs":
-                      {
-                        "vo":
-                          {
-                            "terms": { "field": "vo", "size" : 99999 },
-                            "aggs":  { "running_processors": { "sum_bucket": { "buckets_path": "machinetype>running_processors" } },
-                                       "running_machines":   { "sum_bucket": { "buckets_path": "machinetype>running_machines"   } },
-                                       "running_hs06":       { "sum_bucket": { "buckets_path": "machinetype>running_hs06"       } },
-                                       "machinetype":
-                                         {
-                                           "terms": { "field": "machinetype", "size" : 99999 },
-                                           "aggs":  { "running_processors": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
-                                                      "running_machines":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
-                                                      "running_hs06":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } },
-                                                      "factory":
-                                                        {
-                                                          "terms": { "field": "factory", "size": 99999 },
-                                                          "aggs":  { "running_processors": { "avg": { "field": "running_processors" } },
-                                                                     "running_machines":   { "avg": { "field": "running_machines"   } },
-                                                                     "running_hs06":       { "avg": { "field": "running_hs06"       } }
-                                                                   }
-                                                        }
-                                                    }
-                                         }
-                                     }
-                          },
-                        "time_average": { "avg": { "field": "time_received" } }
-                      }
                   }
               }
            }""" % (timeEnd - timeSpan, timeEnd, siteName, spaceName, 
                    timeSpan / timeBuckets,
-                   (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets),
-                   timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(machinetypesSearch))
 
     ms = es.search(
@@ -822,9 +717,11 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
           size        = 0,
           body        = machinetypesSearch)
 
+    print '<!-- ms took %d -->' % ms['took']
+
 #    pprint.pprint(ms)
-    print 'ms took',ms['took']
-    print '</pre>'
+#    print 'ms took',ms['took']
+#    print '</pre>'
 
     machinetypeRunningProcLists = {}
     machinetypeRunningMachinesLists = {}
@@ -844,28 +741,13 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
            machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
            machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
 
-    voRunningProcLists = {}
-    voRunningMachinesLists = {}
-    voRunningHS06Lists = {}
-
-    for j in ms['aggregations']['vo_names']['buckets']:
-      voRunningProcLists[j['key']]     = [0.0] * timeBuckets
-      voRunningMachinesLists[j['key']] = [0.0] * timeBuckets
-      voRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
-
-    for bucket in ms['aggregations']['vo_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
-
-       if i >= 0 and i < timeBuckets:
-         for j in bucket['vo']['buckets']:
-           voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
-           voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
+    # Turn results into charts
+    print '<div style="text-align: center; width: 100%">'
 
     # CPU load per factory
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'CPU load in space ' + spaceName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'CPU load per factory'
 
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
@@ -877,8 +759,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
 
     # Running processors per factory
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors in space ' + spaceName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningProcLists[j['key']], 
@@ -890,8 +772,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     
     # Running machines per factory
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines in space ' + spaceName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningMachinesLists[j['key']], 
@@ -903,8 +785,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     
     # Running HS06 per factory
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 in space ' + spaceName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningHS06Lists[j['key']], 
@@ -916,8 +798,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     
     # Running processors per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors in space ' + spaceName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -930,8 +812,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
 
     # Running machines per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines in space ' + spaceName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -944,8 +826,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
 
     # Running HS06 per machinetype
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 in space ' + spaceName + ' per machinetype'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -955,49 +837,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
 
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
-
-    # Running processors per VO
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors in space ' + spaceName + ' per VO'
-    for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   voRunningProcLists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # Running machines per VO
-    
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines in space ' + spaceName + ' per VO'
-    for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   voRunningMachinesLists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
-    # Running HS06 per VO
-    
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 in space ' + spaceName + ' per VO'
-    for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   voRunningHS06Lists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
-    chart.htmlPrint()
-
+    print '</div>'
     
   except Exception as e:
     print str(e)
@@ -1088,7 +929,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
            }""" % (timeEnd - timeSpan, timeEnd, siteName, timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(searchBody))
 
     fs = es.search(
@@ -1097,9 +938,11 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
           size     = 0,
           body     = factoriesSearch)
 
+    print '<!-- fs took %d -->' % fs['took']
+
 #    pprint.pprint(t)
-    print 'fs took',fs['took']
-    print '</pre>'
+#    print 'fs took',fs['took']
+#    print '</pre>'
     
     maxProcValues         = [0.0] * timeBuckets
     maxMachinesValues     = [0.0] * timeBuckets
@@ -1197,7 +1040,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                    timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(machinetypesSearch))
 
     ms = es.search(
@@ -1214,9 +1057,11 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
           size     = 0,
           body     = machinetypesSearch)
 
+    print '<!-- ms took %d -->' % ms['took']
+
 #    pprint.pprint(ms)
-    print 'ms took',ms['took']
-    print '</pre>'
+#    print 'ms took',ms['took']
+#    print '</pre>'
 
     voRunningProcLists = {}
     voRunningMachinesLists = {}
@@ -1236,10 +1081,13 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
            voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
            voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
 
+    # Turn results into charts
+    print '<div style="text-align: center; width: 100%">'
+
     # Processors running at this site
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors at site ' + siteName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1252,8 +1100,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     
     # Machines running at this site
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines at site ' + siteName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1266,8 +1114,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     
     # HS06 running at this site
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 at site ' + siteName
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1280,8 +1128,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     
     # Running processors per VO
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors at site ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1294,8 +1142,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
 
     # Running machines per VO
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines at site ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1308,8 +1156,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
 
     # Running HS06 per VO
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 at site ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1319,6 +1167,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
 
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
+
+    print '</div>'
 
   except Exception as e:
     print str(e)
@@ -1422,7 +1272,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
            }""" % (timeEnd - timeSpan, timeEnd, timeSpan / timeBuckets, 
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(searchBody))
 
     fs = es.search(
@@ -1431,8 +1281,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
           size     = 0,
           body     = factoriesSearch)
 
+    print '<!-- fs took %d -->' % fs['took']
+
 #    pprint.pprint(t)
-    print '</pre>'
+#    print '</pre>'
     
     maxProcValues         = [0.0] * timeBuckets
     maxMachinesValues     = [0.0] * timeBuckets
@@ -1538,7 +1390,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                    timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
-    print '<pre>'
+#    print '<pre>'
 #    pprint.pprint(json.loads(machinetypesSearch))
 
     ms = es.search(
@@ -1555,9 +1407,11 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
           size     = 0,
           body     = machinetypesSearch)
 
+    print '<!-- ms took %d -->' % ms['took']
+
 #    pprint.pprint(ms)
-    print 'ms took',ms['took']
-    print '</pre>'
+#    print 'ms took',ms['took']
+#    print '</pre>'
 
     voRunningProcLists = {}
     voRunningMachinesLists = {}
@@ -1577,10 +1431,13 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
            voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
            voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
 
+    # Turn results into charts
+    print '<div style="text-align: center; width: 100%">'
+
     # Processors running at all sites
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1593,8 +1450,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     
     # Machines running at all sites
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1607,8 +1464,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     
     # HS06 running at all sites
 
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1621,8 +1478,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
     # Running processors per VO at all sites
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Processors ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1635,8 +1492,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
     # Running machines per VO at all sites
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Machines ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running machines per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1649,8 +1506,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
     # Running HS06 per VO at all sites
     
-    chart = VacMonStackedLine(timeSpan, timeEnd, timeBuckets)
-    chart.title = 'HS06 ' + siteName + ' per VO'
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 per VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1660,6 +1517,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
+
+    print '</div>'
     
   except Exception as e:
     print str(e)
@@ -1678,7 +1537,7 @@ requestURI    = os.environ['REQUEST_URI']
 if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-./:') != '':
   # Redirect to main page if unacceptable characters in URI
   print 'Status: 302 Found 0'
-  print 'Location: http://vacmon.gridpp.ac.uk/260:15180/'
+  print 'Location: http://vacmon.gridpp.ac.uk/258:15180/'
   print
   sys.exit(0)
 

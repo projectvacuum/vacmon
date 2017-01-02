@@ -153,9 +153,13 @@ def vacmonListener():
        continue
        
      message['time_received'] = int(time.time())
-       
+#     if message['time_received'] % 5 != 0:
+#       # We only process 1 in 5 messages!
+#       continue
+
      id = str(time.time()) + '.' + str(n)
      n += 1
+
      vacmon.vacutils.logLine('Composing document %s from json len=%d' % (id, len(jsonMessage)))
 
      # Fix up shared deprecated/changed key names

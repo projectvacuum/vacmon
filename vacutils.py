@@ -5,7 +5,7 @@
 ## UNMODIFIED VERSIONS ARE COPIED TO THE Vcycle REPO AS NEEDED  ##
 #
 #  Andrew McNab, University of Manchester.
-#  Copyright (c) 2013-6. All rights reserved.
+#  Copyright (c) 2013-7. All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or
 #  without modification, are permitted provided that the following
@@ -41,14 +41,17 @@ import re
 import sys
 import stat
 import time
+import glob
+import json
 import ctypes
 import string
 import urllib
 import StringIO
 import tempfile
 import calendar
-
+import hashlib
 import pycurl
+import base64
 import M2Crypto
 
 def logLine(text):
@@ -88,8 +91,98 @@ def secondsToHHMMSS(seconds):
    mm, ss = divmod(ss, 60)
    return '%02d:%02d:%02d' % (hh, mm, ss)
 
-def createUserData(shutdownTime, machinetypesPath, options, versionString, spaceName, machinetypeName, userDataPath, hostName, uuidStr, 
-                   machinefeaturesURL = None, jobfeaturesURL = None, joboutputsURL = None):
+def secondsToString(timeStamp):
+
+   if timeStamp is None or timeStamp == 0:
+     return ' - '
+  
+   seconds = int(time.time() - timeStamp)
+
+   if seconds < 120:
+     return str(seconds) + 's'
+   elif seconds < 7200:
+     return '%dm' % (seconds / 60)
+   elif seconds < 172800:
+     return '%dh' % (seconds / 3600)
+   else:
+     return '%dd' % (seconds / 86400)
+
+def readPipe(pipeFile, pipeURL, versionString, updatePipes = False):
+
+   # Default value in case not given in file
+   cacheSeconds = 3600
+
+   try:
+     pipeDict = json.load(open(pipeFile, 'r'))
+   except:
+     logLine('Unable to read vacuum pipe file ' + pipeFile)
+     pipeDict = { 'cache_seconds' : cacheSeconds }
+     
+     try:
+       f = open(pipeFile, 'w')
+     except:
+       raise NameError('Unable to write vacuum pipe file ' + pipeFile)
+     else:
+       json.dump(pipeDict, f)
+       f.close()
+       # still force an attempt to fetch remote file
+       cacheSeconds = 0
+
+   else:
+     try:
+       cacheSeconds = int(pipeDict['cache_seconds'])
+     except:
+       pipeDict['cache_seconds'] = cacheSeconds
+
+   # Check if cache seconds has expired
+   if updatePipes and \
+      int(os.stat(pipeFile).st_mtime) < time.time() - cacheSeconds and \
+      ((pipeURL[0:7] == 'http://') or (pipeURL[0:8] == 'https://')):
+     buffer = StringIO.StringIO()
+     c = pycurl.Curl()
+     c.setopt(c.URL, pipeURL)
+     c.setopt(c.WRITEFUNCTION, buffer.write)
+     c.setopt(c.USERAGENT, versionString)
+     c.setopt(c.TIMEOUT, 30)
+     c.setopt(c.FOLLOWLOCATION, True)
+     c.setopt(c.SSL_VERIFYPEER, 1)
+     c.setopt(c.SSL_VERIFYHOST, 2)
+               
+     if os.path.isdir('/etc/grid-security/certificates'):
+       c.setopt(c.CAPATH, '/etc/grid-security/certificates')
+     else:
+       logLine('/etc/grid-security/certificates directory does not exist - relying on curl bundle of commercial CAs')
+
+     logLine('Fetching ' + pipeURL)
+
+     try:
+       c.perform()
+     except Exception as e:
+       raise NameError('Failed to read ' + pipeURL + ' (' + str(e) + ')')
+
+     c.close()
+
+     try:
+       pipeDict = json.loads(buffer.getvalue())
+     except:
+       raise NameError('Failed to load vacuum pipe file from ' + pipeURL)
+     else:
+       try:
+         f = open(pipeFile, 'w')
+       except:
+         logLine('Unable to write vacuum pipe file ' + pipeFile)
+         return pipeDict
+       else:
+         json.dump(pipeDict, f)
+         f.close()
+         logLine('Saved ' + pipeURL + ' as ' + pipeFile)
+
+     createFile(pipeFile, json.dumps(pipeDict), stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH)
+
+   return pipeDict
+
+def createUserData(shutdownTime, machinetypePath, options, versionString, spaceName, machinetypeName, userDataPath, hostName, uuidStr, 
+                   machinefeaturesURL = None, jobfeaturesURL = None, joboutputsURL = None, rootImageURL = None):
    
    # Get raw user_data template file, either from network ...
    if (userDataPath[0:7] == 'http://') or (userDataPath[0:8] == 'https://'):
@@ -114,14 +207,16 @@ def createUserData(shutdownTime, machinetypesPath, options, versionString, space
        raise NameError('Failed to read ' + userDataPath + ' (' + str(e) + ')')
 
      c.close()
-     userDataContents = buffer.getvalue()
+
+     # We only do this substitution if it was an HTTP(S) URL
+     userDataContents = buffer.getvalue().replace('##user_data_url##', userDataPath)
 
    # ... or from filesystem
    else:
      if userDataPath[0] == '/':
        userDataFile = userDataPath
      else:
-       userDataFile = machinetypesPath + '/' + machinetypeName + '/' + userDataPath
+       userDataFile = machinetypePath + '/files/' + userDataPath
 
      try:
        u = open(userDataFile, 'r')
@@ -130,7 +225,7 @@ def createUserData(shutdownTime, machinetypesPath, options, versionString, space
      except:
        raise NameError('Failed to read ' + userDataFile)
 
-   # Default substitutions
+   # Default substitutions (plus ##user_data_url## possibly done already)
    userDataContents = userDataContents.replace('##user_data_space##',            spaceName)
    userDataContents = userDataContents.replace('##user_data_machinetype##',      machinetypeName)
    userDataContents = userDataContents.replace('##user_data_machine_hostname##', hostName)
@@ -146,6 +241,9 @@ def createUserData(shutdownTime, machinetypesPath, options, versionString, space
    if joboutputsURL:
      userDataContents = userDataContents.replace('##user_data_joboutputs_url##', joboutputsURL)     
 
+   if rootImageURL :
+     userDataContents = userDataContents.replace('##user_data_root_image_url##', rootImageURL)
+
    # Deprecated vmtype/VM/VMLM terminology
    userDataContents = userDataContents.replace('##user_data_vmtype##',           machinetypeName)
    userDataContents = userDataContents.replace('##user_data_vm_hostname##',      hostName)
@@ -156,25 +254,17 @@ def createUserData(shutdownTime, machinetypesPath, options, versionString, space
      userDataContents = userDataContents.replace('##user_data_uuid##', uuidStr)
 
    # Insert a proxy created from user_data_proxy_cert / user_data_proxy_key
-   if 'user_data_proxy_cert' in options and 'user_data_proxy_key' in options:
-
-     if options['user_data_proxy_cert'][0] == '/':
-       certPath = options['user_data_proxy_cert']
-     else:
-       certPath = machinetypesPath + '/' + machinetypeName + '/' + options['user_data_proxy_cert']
-
-     if options['user_data_proxy_key'][0] == '/':
-       keyPath = options['user_data_proxy_key']
-     else:
-       keyPath = machinetypesPath + '/' + machinetypeName + '/' + options['user_data_proxy_key']
+   if 'user_data_proxy' in options and options['user_data_proxy'] == True:
+     certPath = machinetypePath + '/x509cert.pem'
+     keyPath  = machinetypePath + '/x509key.pem'
 
      try:
        if ('legacy_proxy' in options) and options['legacy_proxy']:
-         userDataContents = userDataContents.replace('##user_data_x509_proxy##',
+         userDataContents = userDataContents.replace('##user_data_option_x509_proxy##',
                               makeX509Proxy(certPath, keyPath, shutdownTime, isLegacyProxy=True))
        else:
-         userDataContents = userDataContents.replace('##user_data_x509_proxy##',
-                              makeX509Proxy(certPath, keyPath, shutdownTime, isLegacyProxy=False))
+         userDataContents = userDataContents.replace('##user_data_option_x509_proxy##',
+                              makeX509Proxy(certPath, keyPath, shutdownTime, isLegacyProxy=False, cn=machinetypeName))
      except Exception as e:
        raise NameError('Faled to make proxy (' + str(e) + ')')
 
@@ -187,9 +277,14 @@ def createUserData(shutdownTime, machinetypesPath, options, versionString, space
            if oneValue[0] == '/':
              f = open(oneValue, 'r')
            else:
-             f = open(machinetypesPath + '/' + machinetypeName + '/' + oneValue, 'r')
-                           
+             f = open(machinetypePath + '/files/' + oneValue, 'r')
+
+           # deprecated: replace ##user_data_file_xxxx## with value                           
            userDataContents = userDataContents.replace('##' + oneOption + '##', f.read())
+
+           # new behaviour: replace ##user_data_option_xxxx## with value from user_data_file_xxxx                           
+           userDataContents = userDataContents.replace('##user_data_option_' + oneOption[15:] + '##', f.read())
+
            f.close()
         except:
            raise NameError('Failed to read ' + oneValue + ' for ' + oneOption)          
@@ -205,7 +300,7 @@ def emptyCallback1(p1):
 def emptyCallback2(p1, p2):
    return
 
-def makeX509Proxy(certPath, keyPath, expirationTime, isLegacyProxy=False):
+def makeX509Proxy(certPath, keyPath, expirationTime, isLegacyProxy=False, cn=None):
    # Return a PEM-encoded limited proxy as a string in either Globus Legacy 
    # or RFC 3820 format. Checks that the existing cert/proxy expires after
    # the given expirationTime, but no other checks are done.
@@ -244,7 +339,7 @@ def makeX509Proxy(certPath, keyPath, expirationTime, isLegacyProxy=False):
    # Create the public/private keypair for the new proxy
    
    newKey = M2Crypto.EVP.PKey()
-   newKey.assign_rsa(M2Crypto.RSA.gen_key(512, 65537, emptyCallback2))
+   newKey.assign_rsa(M2Crypto.RSA.gen_key(1024, 65537, emptyCallback2))
 
    # Start filling in the new certificate object
 
@@ -259,13 +354,23 @@ def makeX509Proxy(certPath, keyPath, expirationTime, isLegacyProxy=False):
    newSubject = oldCerts[0].get_subject()
 
    if isLegacyProxy:
+     # Globus legacy proxy
      newSubject.add_entry_by_txt(field = "CN",
                                  type  = 0x1001,
                                  entry = 'limited proxy',
                                  len   = -1, 
                                  loc   = -1, 
                                  set   = 0)
+   elif cn:
+     # RFC proxy, probably with machinetypeName as proxy CN
+     newSubject.add_entry_by_txt(field = "CN",
+                                 type  = 0x1001,
+                                 entry = cn,
+                                 len   = -1, 
+                                 loc   = -1, 
+                                 set   = 0)
    else:
+     # RFC proxy, with Unix time as CN
      newSubject.add_entry_by_txt(field = "CN",
                                  type  = 0x1001,
                                  entry = str(int(time.time() * 100)),
@@ -306,7 +411,97 @@ def makeX509Proxy(certPath, keyPath, expirationTime, isLegacyProxy=False):
 
    return proxyString 
 
-def getRemoteRootImage(url, imageCache, tmpDir):
+def getCernvmImageData(fileName):
+
+   data = { 'verified' : False, 'dn' : None }
+
+   try:
+     length = os.stat(fileName).st_size
+   except Exception as e:
+     logLine('Failed to get CernVM image size (' + str(e) + ')')     
+     return data
+   
+   if length <= 65536:
+     logLine('CernVM image only ' + str(length) + ' bytes long: must be more than 65536')
+     return data
+
+   try:
+     f = open(fileName, 'r')
+   except Exception as e:
+     logLine('Failed to open CernVM image (' + str(e) + ')')
+     return data
+
+   try:
+     f.seek(-64 * 1024, os.SEEK_END)
+     metadataBlock = f.read(32 * 1024).rstrip("\x00")
+     # Quick hack until the metadata section is fixed in the CernVM images (extra comma)
+     metadataBlock = metadataBlock.replace('HEAD",\n', 'HEAD"\n')
+     metadataDict  = json.loads(metadataBlock)
+
+     if 'ucernvm-version' in metadataDict:
+       data['version'] = metadataDict['ucernvm-version']
+   except Exception as e:
+     logLine('Failed to load Metadata Block JSON from CernVM image (' + str(e) + ')')
+
+   try:
+     f.seek(-32 * 1024, os.SEEK_END)
+     signatureBlock = f.read(32 * 1024).rstrip("\x00")
+     # Quick hack until the howto-verify section is fixed in the CernVM images (missing commas)
+     signatureBlock = signatureBlock.replace('signature>"\n', 'signature>",\n').replace('cvm-sign01.cern.ch"\n', 'cvm-sign01.cern.ch",\n')
+     signatureDict  = json.loads(signatureBlock)
+   except Exception as e:
+     logLine('Failed to load Signature Block JSON from CernVM image (' + str(e) + ')')
+     return data
+
+   try:
+     f.seek(0, os.SEEK_SET)
+     digestableImage = f.read(length - 32 * 1024)
+     hash = hashlib.sha256(digestableImage)
+     digest = hash.digest()
+   except Exception as e:
+     logLine('Failed to make digest of CernVM image (' + str(e) + ')')
+     return data
+
+   try:
+     certificate = base64.b64decode(signatureDict['certificate'])
+     x509 = M2Crypto.X509.load_cert_string(certificate)
+     rsaPubkey = x509.get_pubkey().get_rsa()
+   except Exception as e:
+     logLine('Failed to get X.509 certificate and RSA public key (' + str(e) + ')')
+     return data
+
+   try:
+     signature = base64.b64decode(signatureDict['signature'])
+   except:
+     logLine('Failed to get signature from CernVM Signature Block')
+     return data
+
+   if not rsaPubkey.verify(digest, signature, 'sha256'):
+     logLine('Certificate and calculated hash do not match given signature')
+     return data
+
+   try:
+     # This isn't provided by M2Crypto, so we use openssl command
+     p = os.popen('/usr/bin/openssl verify -CApath /etc/grid-security/certificates >/dev/null', 'w')
+     p.write(certificate)
+
+     if p.close() is None:
+       try:
+         dn = str(x509.get_subject())
+       except Exception as e:
+         logLine('Failed to get X.509 Subject DN (' + str(e) + ')')
+         return data
+       else:
+         data['verified'] = True
+         data['dn']       = dn
+         
+   except Exception as e:
+     logLine('Failed to run /usr/bin/openssl verify command (' + str(e) + ')')
+     return data
+   
+   return data
+
+def getRemoteRootImage(url, imageCache, tmpDir, versionString):
 
    try:
      f, tempName = tempfile.mkstemp(prefix = 'tmp', dir = tmpDir)
@@ -316,6 +511,7 @@ def getRemoteRootImage(url, imageCache, tmpDir):
    ff = os.fdopen(f, 'wb')
    
    c = pycurl.Curl()
+   c.setopt(c.USERAGENT, versionString)
    c.setopt(c.URL, url)
    c.setopt(c.WRITEDATA, ff)
 
@@ -450,4 +646,90 @@ def setProcessName(processName):
    except:
      logLine('Failed setting process name in argv[] to ' + processName)
      return
-          
+
+def makeSyncRecord(dirPrefix, targetYearMonth, tmpDir):
+
+   try:
+      targetMonth = int(targetYearMonth[4:6])
+      targetYear  = int(targetYearMonth[0:4])
+   except:
+      print 'Cannot parse as YYYYMM: ' + targetYearMonth
+      return 1
+      
+   numberJobs = 0
+   site       = None
+   submitHost = None
+
+   recordsList = glob.glob(dirPrefix + '/apel-archive/' + targetYearMonth + '*/*')
+   # We go backwards in time, assuming that site and SubmitHost for 
+   # the most recent record are correct
+   recordsList.sort(reverse=True)
+
+   for fileName in recordsList:
+      thisSite = None
+      thisSubmitHost = None
+    
+      for line in open(fileName, 'r'):
+        if line.startswith('Site:'):
+          thisSite = line[5:].strip()
+        elif line.startswith('SubmitHost:'):
+          thisSubmitHost = line[11:].strip()
+    
+        if thisSite and thisSubmitHost:
+          break  
+
+      if thisSite is None:
+        print 'No Site given in ' + fileName + ' !! - please fix this - skipping'
+        continue
+      
+      if thisSubmitHost is None:
+        print 'No SubmitHost given in ' + fileName + ' !! - please fix this - skipping'
+        continue
+      
+      if site is None:
+        site = thisSite
+      elif site != thisSite:
+        print 'Site changes from ' + site + ' to ' + thisSite + ' - please fix ' + fileName + ' - skipping'
+        continue
+      
+      if submitHost is None:
+        submitHost = thisSubmitHost
+      elif submitHost != thisSubmitHost:
+        print 'SubmitHost changes from ' + submitHost + ' to ' + thisSubmitHost + ' - please fix ' + fileName + ' - skipping'
+        continue
+      
+      numberJobs += 1
+
+   syncRecord = 'APEL-sync-message: v0.1\n'               \
+                'Site: ' + site + '\n'                    \
+                'SubmitHost: ' + submitHost + '\n'        \
+                'NumberOfJobs: ' + str(numberJobs) + '\n' \
+                'Month: ' + str(targetMonth) + '\n'       \
+                'Year: ' + str(targetYear) + '\n'         \
+                '%%\n'
+
+   gmtime = time.gmtime()
+
+   try:
+     os.makedirs(time.strftime(dirPrefix + '/apel-outgoing/%Y%m%d', gmtime))
+   except:
+     pass
+
+   syncFileName = time.strftime(dirPrefix + '/apel-outgoing/%Y%m%d/%H%M%S', gmtime) + (str(time.time() % 1) + '00000000')[2:10]
+
+   if createFile(syncFileName, syncRecord, stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, tmpDir):
+      print 'Created ' + syncFileName
+      return 0
+
+   print 'Failed to create ' + syncFileName
+   return 2
+
+
+def makeSshFingerprint(pubFileLine):
+   # Convert a line from an ssh id_rsa.pub (or id_dsa.pub) file to a fingerprint
+
+   try:
+     fingerprint = hashlib.md5(base64.b64decode(pubFileLine.strip().split()[1].encode('ascii'))).hexdigest()
+     return ':'.join(fingerprint[i:i+2] for i in range(0, len(fingerprint), 2))
+   except:
+     return None

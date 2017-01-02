@@ -561,17 +561,20 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     print '<h2>Most recent update from %s</h2>' % factoryName.split('.')[0]
     print '<table class="vacmon">'
     
-    for i in factoryFields:    
-     if i[2] == 'double':
-       s = '%.02f' % fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0]
-     elif i[2] == 'MiB':
-       s = fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1024
-     elif i[2] == 'MB':
-       s = fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1000
-     elif i[2] == 'time':
-       s = time.strftime('%d %b %Y %H:%M UTC', time.gmtime(fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1000))
-     else:
-       s = str(fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0])
+    for i in factoryFields:
+     try:
+       if i[2] == 'double':
+         s = '%.02f' % fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0]
+       elif i[2] == 'MiB':
+         s = fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1024
+       elif i[2] == 'MB':
+         s = fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1000
+       elif i[2] == 'time':
+         s = time.strftime('%d %b %Y %H:%M UTC', time.gmtime(fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0] / 1000))
+       else:
+         s = str(fs['aggregations']['factory_status']['hits']['hits'][0]['fields'][i[0]][0])
+     except:
+       s = ' - '
 
      try:
        print '<tr><td class="vacmon">%s</td><td class="vacmon">%s</td></tr>' % ( i[1], s )
@@ -1467,7 +1470,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                       }
                   }
               }
-           }""" % (timeEnd - timeSpan, timeEnd, timeSpan / timeBuckets, 
+           }""" % (timeEnd - timeSpan, timeEnd, timeSpan / timeBuckets,
                    (timeEnd - timeSpan) - ((timeEnd - timeSpan) / (timeSpan / timeBuckets)) * (timeSpan / timeBuckets) )
 
     fs = es.search(
@@ -1783,6 +1786,10 @@ except:
 
 try:
   timeSpan = int(splitSizeTimeRangeVO[1], 16)
+  
+  if timeSpan / timeBuckets < 300:
+    # Buckets cannot be less than 5min (300s)
+    timeBuckets = timeSpan / 300
   
   if timeSpan % timeBuckets != 0:
     # Must be divisible by timeBuckets!      

@@ -1275,7 +1275,13 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
 
     # Turn results into charts
     print '<div style="text-align: center; width: 100%">'
+    print '<p><b>Space:</b> '
 
+    for j in fs['aggregations']['space_names']['buckets']:
+      print ' <input type="button" value="%s" onclick="window.location.href=\'/%s/%s/%s/\'"> ' % (j['key'], sizeTimeRangeVO, siteName, j['key'])
+
+    print '</p>'
+   
     # Processors running at this site
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
@@ -1634,8 +1640,14 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
            voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
 
     # Turn results into charts
-    print '<div style="text-align: center; width: 100%">'
+    print '<div style="text-align: center; width: 100%">'        
+    print '<p><b>Site:</b> '
 
+    for j in fs['aggregations']['site_names']['buckets']:
+      print ' <input type="button" value="%s" onclick="window.location.href=\'/%s/%s/\'"> ' % (j['key'], sizeTimeRangeVO, j['key'])
+
+    print '</p>'
+ 
     # Processors running at all sites
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)

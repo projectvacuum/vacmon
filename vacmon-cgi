@@ -46,7 +46,8 @@ import elasticsearch
 
 import vacmon
 
-esDebug = False
+esDebug   = False
+esTimeout = 60
 
 class VacMonStackedLine(pygal.StackedLine):
 
@@ -279,7 +280,7 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
   print '<h1>Factory ' + factoryName + '</h1>'
 
   try:
-    es = elasticsearch.Elasticsearch()
+    es = elasticsearch.Elasticsearch(timeout = esTimeout)
 
     # Do factories search and store results
 
@@ -365,28 +366,31 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     swapUsedValues        = [0.0] * timeBuckets
     swapFreeValues        = [0.0] * timeBuckets
 
-    for bucket in fs['aggregations']['factory_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in fs['aggregations']['factory_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-       if i >= 0 and i < timeBuckets:
-         loadAvgValues[i]         = getBucketValue(bucket['load_average'])
-         maxProcValues[i]         = getBucketValue(bucket['max_processors'])
-         runningProcValues[i]     = getBucketValue(bucket['running_processors'])
+        if i >= 0 and i < timeBuckets:
+          loadAvgValues[i]         = getBucketValue(bucket['load_average'])
+          maxProcValues[i]         = getBucketValue(bucket['max_processors'])
+          runningProcValues[i]     = getBucketValue(bucket['running_processors'])
 
-         maxMachinesValues[i]     = getBucketValue(bucket['max_machines'])
-         runningMachinesValues[i] = getBucketValue(bucket['running_machines'])
+          maxMachinesValues[i]     = getBucketValue(bucket['max_machines'])
+          runningMachinesValues[i] = getBucketValue(bucket['running_machines'])
 
-         maxHS06Values[i]         = getBucketValue(bucket['max_hs06'])
-         runningHS06Values[i]     = getBucketValue(bucket['running_hs06'])
+          maxHS06Values[i]         = getBucketValue(bucket['max_hs06'])
+          runningHS06Values[i]     = getBucketValue(bucket['running_hs06'])
 
-         rootDiskValues[i]        = getBucketValue(bucket['root_disk_avail_kb']) / 1000
-         daemonDiskValues[i]      = getBucketValue(bucket['daemon_disk_avail_kb']) / 1000
+          rootDiskValues[i]        = getBucketValue(bucket['root_disk_avail_kb']) / 1000
+          daemonDiskValues[i]      = getBucketValue(bucket['daemon_disk_avail_kb']) / 1000
 
-         memUsedValues[i]         = getBucketValue(bucket['mem_used_kb']) / 1024
-         memFreeValues[i]         = (getBucketValue(bucket['mem_total_kb']) - getBucketValue(bucket['mem_used_kb'])) / 1024
+          memUsedValues[i]         = getBucketValue(bucket['mem_used_kb']) / 1024
+          memFreeValues[i]         = (getBucketValue(bucket['mem_total_kb']) - getBucketValue(bucket['mem_used_kb'])) / 1024
 
-         swapUsedValues[i]        = getBucketValue(bucket['swap_used_kb']) / 1024
-         swapFreeValues[i]        = getBucketValue(bucket['swap_free_kb']) / 1024
+          swapUsedValues[i]        = getBucketValue(bucket['swap_used_kb']) / 1024
+          swapFreeValues[i]        = getBucketValue(bucket['swap_free_kb']) / 1024
+    except:
+      pass
 
     # Do machinetypes search and store results
 
@@ -473,22 +477,25 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
       machinetypeRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       machinetypeRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in ms['aggregations']['machinetype_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in ms['aggregations']['machinetype_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-       if i >= 0 and i < timeBuckets:
-         for j in bucket['machinetype']['buckets']:
-           machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
-           machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+        if i >= 0 and i < timeBuckets:
+          for j in bucket['machinetype']['buckets']:
+            machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+            machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+            machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+    except:
+      pass
 
     # Turn stored results into charts
     print '<div style="text-align: center; width: 100%">'
 
-    # Running HS06 per machinetype
+    # Running HS06 by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 per machinetype'
+    chart.title = 'Running HS06 by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -526,10 +533,10 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
     chart.htmlPrint()
 
-    # Running processors per machinetype
+    # Running processors by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running rocessors per machinetype'
+    chart.title = 'Running processors by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -540,10 +547,10 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running machines per machinetype
+    # Running machines by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines per machinetype'
+    chart.title = 'Running machines by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -641,7 +648,7 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
   print '<h1>Space ' + spaceName + '</h1>'
 
   try:
-    es = elasticsearch.Elasticsearch()
+    es = elasticsearch.Elasticsearch(timeout = esTimeout)
   
     factoriesSearch =  """{
             "query": 
@@ -734,20 +741,23 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
       factoryRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       factoryRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in fs['aggregations']['factory_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in fs['aggregations']['factory_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-       if i >= 0 and i < timeBuckets:
-         loadAvgValues[i]     = getBucketValue(bucket['load_average_space'])
-         maxProcValues[i]     = getBucketValue(bucket['max_processors_space'])
-         maxMachinesValues[i] = getBucketValue(bucket['max_machines_space'])
-         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_space'])
+        if i >= 0 and i < timeBuckets:
+          loadAvgValues[i]     = getBucketValue(bucket['load_average_space'])
+          maxProcValues[i]     = getBucketValue(bucket['max_processors_space'])
+          maxMachinesValues[i] = getBucketValue(bucket['max_machines_space'])
+          maxHS06Values[i]     = getBucketValue(bucket['max_hs06_space'])
 
-         for j in bucket['factory']['buckets']:
-           factoryLoadAvgLists[j['key']][i]         = getBucketValue(j['load_average'])
-           factoryRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
-           factoryRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           factoryRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
+          for j in bucket['factory']['buckets']:
+            factoryLoadAvgLists[j['key']][i]         = getBucketValue(j['load_average'])
+            factoryRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+            factoryRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+            factoryRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
+    except:
+      pass
 
     machinetypesSearch =  """{
             "query": 
@@ -846,22 +856,25 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
       machinetypeRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       machinetypeRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in ms['aggregations']['machinetype_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in ms['aggregations']['machinetype_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-       if i >= 0 and i < timeBuckets:
-         for j in bucket['machinetype']['buckets']:
-           machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
-           machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+        if i >= 0 and i < timeBuckets:
+          for j in bucket['machinetype']['buckets']:
+            machinetypeRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+            machinetypeRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+            machinetypeRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+    except:
+      pass
 
     # Turn results into charts
     print '<div style="text-align: center; width: 100%">'
 
-    # CPU load per factory
+    # CPU load by factory
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'CPU load per factory'
+    chart.title = 'CPU load by factory'
 
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
@@ -871,10 +884,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
 
     chart.htmlPrint()
 
-    # Running processors per factory
+    # Running processors by factory
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running processors per factory'
+    chart.title = 'Running processors by factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningProcLists[j['key']], 
@@ -884,10 +897,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
-    # Running machines per factory
+    # Running machines by factory
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running machines per factory'
+    chart.title = 'Running machines by factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningMachinesLists[j['key']], 
@@ -897,10 +910,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False, legend_at_bottom_columns=4)
     chart.htmlPrint()
     
-    # Running HS06 per factory
+    # Running HS06 by factory
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running HS06 per factory'
+    chart.title = 'Running HS06 by factory'
     for j in fs['aggregations']['factory_names']['buckets']:
       chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
                       factoryRunningHS06Lists[j['key']], 
@@ -910,10 +923,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
-    # Running processors per machinetype
+    # Running processors by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running processors per machinetype'
+    chart.title = 'Running processors by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -924,10 +937,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running machines per machinetype
+    # Running machines by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running machines per machinetype'
+    chart.title = 'Running machines by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -938,10 +951,10 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running HS06 per machinetype
+    # Running HS06 by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running HS06 per machinetype'
+    chart.title = 'Running HS06 by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1046,7 +1059,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
   print '<h1>Site ' + siteName + '</h1>'
 
   try:
-    es = elasticsearch.Elasticsearch()
+    es = elasticsearch.Elasticsearch(timeout = esTimeout)
   
     factoriesSearch =  """{
             "query": 
@@ -1152,18 +1165,21 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
       spaceRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       spaceRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in fs['aggregations']['site_histogram']['buckets']:
-      i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in fs['aggregations']['site_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
       
-      if i >= 0 and i < timeBuckets:
-         maxProcValues[i]     = getBucketValue(bucket['max_processors_site'])
-         maxMachinesValues[i] = getBucketValue(bucket['max_machines_site'])
-         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_site'])
+        if i >= 0 and i < timeBuckets:
+           maxProcValues[i]     = getBucketValue(bucket['max_processors_site'])
+           maxMachinesValues[i] = getBucketValue(bucket['max_machines_site'])
+           maxHS06Values[i]     = getBucketValue(bucket['max_hs06_site'])
 
-         for j in bucket['space']['buckets']:
-           spaceRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_space'])
-           spaceRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_space'])
-           spaceRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_space'])
+           for j in bucket['space']['buckets']:
+             spaceRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_space'])
+             spaceRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_space'])
+             spaceRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_space'])
+    except:
+      pass
 
     machinetypesSearch =  """{
             "query": 
@@ -1267,14 +1283,17 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
       voRunningMachinesLists[j['key']] = [0.0] * timeBuckets
       voRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
-    for bucket in ms['aggregations']['vo_histogram']['buckets']:
-       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
+    try:
+      for bucket in ms['aggregations']['vo_histogram']['buckets']:
+        i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
 
-       if i >= 0 and i < timeBuckets:
-         for j in bucket['vo']['buckets']:
-           voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
-           voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
-           voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])    
+        if i >= 0 and i < timeBuckets:
+          for j in bucket['vo']['buckets']:
+            voRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors'])
+            voRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines'])
+            voRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06'])
+    except:
+      pass
 
     # Turn results into charts
     print '<div style="text-align: center; width: 100%">'
@@ -1288,7 +1307,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     # Processors running at this site
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running processors per space'
+    chart.title = 'Running processors by space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1302,7 +1321,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     # Machines running at this site
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running machines per space'
+    chart.title = 'Running machines by space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1316,7 +1335,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     # HS06 running at this site
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running HS06 per space'
+    chart.title = 'Running HS06 by space'
 
     for j in fs['aggregations']['space_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
@@ -1327,10 +1346,10 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
-    # Running processors per VO
+    # Running processors by VO
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors per VO'
+    chart.title = 'Running processors by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1341,10 +1360,10 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running machines per VO
+    # Running machines by VO
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines per VO'
+    chart.title = 'Running machines by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1355,10 +1374,10 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running HS06 per VO
+    # Running HS06 by VO
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 per VO'
+    chart.title = 'Running HS06 by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1390,7 +1409,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
   print '<h1>All sites</h1>'
 
   try:
-    es = elasticsearch.Elasticsearch()
+    es = elasticsearch.Elasticsearch(timeout = esTimeout)
   
     factoriesSearch =  """{
             "query": 
@@ -1654,7 +1673,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     # Processors running at all sites
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running processors per site'
+    chart.title = 'Running processors by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1668,7 +1687,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     # Machines running at all sites
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running machines per site'
+    chart.title = 'Running machines by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1682,7 +1701,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     # HS06 running at all sites
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running HS06 per site'
+    chart.title = 'Running HS06 by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
       chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
@@ -1693,10 +1712,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running processors per VO at all sites
+    # Running processors by VO at all sites
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors per VO'
+    chart.title = 'Running processors by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1707,10 +1726,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running machines per VO at all sites
+    # Running machines by VO at all sites
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running machines per VO'
+    chart.title = 'Running machines by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],
@@ -1721,10 +1740,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
-    # Running HS06 per VO at all sites
+    # Running HS06 by VO at all sites
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 per VO'
+    chart.title = 'Running HS06 by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
       if j['sum_running_machines']['value'] > 0.0:
         chart.add( j['key'],

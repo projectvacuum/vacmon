@@ -152,7 +152,7 @@ def htmlFooter():
 def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
 
   months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-  imageSizes = [ 300, 600, 900, 1200 ]
+  imageSizes = [ 300, 500, 900, 1200 ]
 
   print '<br clear="right">'
 
@@ -1773,7 +1773,7 @@ requestURI    = os.environ['REQUEST_URI']
 if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-./:') != '':
   # Redirect to main page if unacceptable characters in URI
   print 'Status: 302 Found 0'
-  print 'Location: http://vacmon.gridpp.ac.uk/258:15180/'
+  print 'Location: http://vacmon.gridpp.ac.uk/1f4:15180/'
   print
   sys.exit(0)
 

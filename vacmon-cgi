@@ -54,7 +54,7 @@ class VacMonStackedLine(pygal.StackedLine):
   def __init__(self, imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=3):
         self.imageSize = imageSize
         pygal.StackedLine.__init__(self, include_x_axis=True, stroke_style={'width': 2}, legend_at_bottom=True, show_x_guides=True, style=pygal.style.LightColorizedStyle, x_label_rotation=30, width=720, height=720, legend_at_bottom_columns=legend_at_bottom_columns)
-        self.x_labels = [ time.strftime('%b-%d %H:%M', time.localtime(timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets))) for i in range(0, timeBuckets) ]
+        self.x_labels = [ time.strftime('%b-%d %H:%M', time.gmtime(timeEnd - timeSpan + (i + 0.5) * (timeSpan / timeBuckets))) for i in range(0, timeBuckets) ]
 
   def _points(self, x_pos):
         # Unfilled series to be overlayed rather than stacked
@@ -123,20 +123,20 @@ function getDateString(y_obj,m_obj,d_obj) {
         return str= y+'-'+m+'-'+d;
         }
 function timeButtonClick(imageSize, voName, uriTail) {
-        var timeStart = new Date(document.forms[0].dateFrom_year.value,
+        var timeStart = Date.UTC(document.forms[0].dateFrom_year.value,
                                  document.forms[0].dateFrom_month.value - 1,
                                  document.forms[0].dateFrom_date.value,
                                  document.forms[0].dateFrom_hour.value,
-                                 document.forms[0].dateFrom_minute.value, 0, 0);
-        var timeEnd   = new Date(document.forms[0].dateTo_year.value,
+                                 document.forms[0].dateFrom_minute.value, 0, 0)/1000;
+        var timeEnd   = Date.UTC(document.forms[0].dateTo_year.value,
                                  document.forms[0].dateTo_month.value - 1,
                                  document.forms[0].dateTo_date.value,
                                  document.forms[0].dateTo_hour.value,
-                                 document.forms[0].dateTo_minute.value, 0, 0);
-        var timeSpan = (timeEnd.getTime() - timeStart.getTime()) / 1000;
+                                 document.forms[0].dateTo_minute.value, 0, 0)/1000;
+        var timeSpan = timeEnd - timeStart;
         return '/' + imageSize.toString(16) + ':' +
                      timeSpan.toString(16) + ':' +
-                     (timeEnd.getTime()/1000).toString(16) + ':' +
+                     timeEnd.toString(16) + ':' +
                      voName + uriTail;
         }
 
@@ -172,7 +172,7 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
   structTimeStart = time.gmtime(timeStart)
   structTimeEnd   = time.gmtime(timeEnd)
 
-  print '<tr><td>Start: '
+  print '<tr><td>Start (UTC): '
   print '<input type="text" size="2" maxlength="2" name="dateFrom_hour" value="%02d">:<input ' % structTimeStart.tm_hour
   print 'type="text" size="2" maxlength="2" name="dateFrom_minute" value="%02d"> ' % structTimeStart.tm_min
     
@@ -191,7 +191,7 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
   print '</select>'
   print '<a href="#" onClick="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" TITLE="calFrom.showCalendar(\'anchorFrom\',getDateString(document.forms[0].dateFrom_year,document.forms[0].dateFrom_month,document.forms[0].dateFrom_date)); return false;" NAME="anchorFrom" ID="anchorFrom"><img src="/cal20px.png" align="absmiddle" width="20" height="20"></A>'
    
-  print '</td><td style="text-align: right">Finish:'
+  print '</td><td style="text-align: right">Finish (UTC):'
   print '<input type="text" size="2" maxlength="2" name="dateTo_hour" value="%02d">:<input ' % structTimeEnd.tm_hour
   print 'type="text" size="2" maxlength="2" name="dateTo_minute" value="%02d"> ' % structTimeEnd.tm_min
     
@@ -996,7 +996,7 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
            if 'time' in i:
              s = vacmon.vacutils.secondsToString(s / 1000)
            elif i == 'daemon_version':
-             s = s.replace(' vacd-factory','')
+             s = s.replace(' vacd-factory','').replace(' vcycled','')
            elif i.startswith('running_'):
              t = j['factory_status']['hits']['hits'][0]['fields'][i.replace('running_','max_')][0]
              s = '%d/%d' % (s, t)

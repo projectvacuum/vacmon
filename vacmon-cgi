@@ -558,7 +558,7 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     print '</div>'
@@ -907,7 +907,7 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                       fill=True, 
                       show_dots=False )
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False, legend_at_bottom_columns=4)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False, legend_at_bottom_columns=4)
     chart.htmlPrint()
     
     # Running HS06 by factory
@@ -948,7 +948,7 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running HS06 by machinetype
@@ -1329,7 +1329,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # HS06 running at this site
@@ -1371,7 +1371,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running HS06 by VO
@@ -1695,7 +1695,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # HS06 running at all sites
@@ -1737,7 +1737,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running HS06 by VO at all sites

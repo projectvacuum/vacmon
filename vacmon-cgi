@@ -414,6 +414,7 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
                   { 
                     "terms": { "field": "machinetype", "size": 99999, "order": { "sum_running_machines": "desc" } },
                     "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } },
+                               "sum_running_hs06"    : { "sum": { "field": "running_hs06" } },
                                "shutdown":
                                  {
                                    "top_hits": { "sort": { "shutdown_time": { "order": "desc" } }, 
@@ -492,20 +493,6 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     # Turn stored results into charts
     print '<div style="text-align: center; width: 100%">'
 
-    # Running HS06 by machinetype
-    
-    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running HS06 by machinetype'
-    for j in ms['aggregations']['machinetype_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   machinetypeRunningHS06Lists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
-    chart.htmlPrint()
-
     # Load/processors on this factory
 
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
@@ -513,6 +500,20 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     chart.add('Load average',     loadAvgValues, fill=True, show_dots=False)
     chart.add('Running processors', runningProcValues, fill=False, show_dots=False)
     chart.add('Max processors',     maxProcValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running processors by machinetype
+    
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running processors by machinetype'
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_machines']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningProcLists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
+    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Memory/swap on this factory
@@ -533,20 +534,6 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
     chart.add('Daemon disk free (MB)', daemonDiskValues, fill=True, show_dots=False)
     chart.htmlPrint()
 
-    # Running processors by machinetype
-    
-    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
-    chart.title = 'Running processors by machinetype'
-    for j in ms['aggregations']['machinetype_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
-        chart.add( j['key'],
-                   machinetypeRunningProcLists[j['key']],
-                   fill=True, 
-                   show_dots=False )
-
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-
     # Running machines by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
@@ -558,7 +545,19 @@ def oneFactory(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeV
                    fill=True, 
                    show_dots=False )
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    # Running HS06 by machinetype
+    
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
+    chart.title = 'Running HS06 by machinetype'
+    for j in ms['aggregations']['machinetype_names']['buckets']:
+      if j['sum_running_hs06']['value'] > 0.0:
+        chart.add( j['key'],
+                   machinetypeRunningHS06Lists[j['key']],
+                   fill=True, 
+                   show_dots=False )
+
     chart.htmlPrint()
 
     print '</div>'
@@ -668,7 +667,8 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                 "factory_names":
                   {
                     "terms": { "field": "factory", "size" : 99999, "order" : { "_term" : "asc" } },
-                    "aggs":  { "factory_status":
+                    "aggs":  { "sum_running_hs06" : { "sum": { "field": "running_hs06" } },
+                               "factory_status":
                                  { "top_hits": { "sort": { "time_received": { "order": "desc" } }, "size": 1, 
                                                  "docvalue_fields" : ["time_received", "boot_time", "daemon_version", "os_issue",
                                                                       "load_average", "running_processors", "max_processors",
@@ -692,18 +692,14 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                             "aggs":  { "load_average":       { "avg": { "field" : "load_average"      } },
                                        "max_processors":     { "avg": { "field" : "max_processors"    } },
                                        "running_processors": { "avg": { "field": "running_processors" } },
-                                       "max_machines":       { "avg": { "field": "max_machines"       } },
                                        "running_machines":   { "avg": { "field": "running_machines"   } },
-                                       "max_hs06":           { "avg": { "field": "max_hs06"           } },
                                        "running_hs06":       { "avg": { "field": "running_hs06"       } }
                                      }
                           },
                         "load_average_space":       { "sum_bucket": { "buckets_path": "factory>load_average"       } },
                         "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
                         "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
-                        "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
                         "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
-                        "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
                         "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
                       }
                   }
@@ -727,8 +723,6 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
     
     loadAvgValues     = [0.0] * timeBuckets
     maxProcValues     = [0.0] * timeBuckets
-    maxMachinesValues = [0.0] * timeBuckets
-    maxHS06Values     = [0.0] * timeBuckets
     
     factoryLoadAvgLists = {}
     factoryRunningProcLists = {}
@@ -748,8 +742,6 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
         if i >= 0 and i < timeBuckets:
           loadAvgValues[i]     = getBucketValue(bucket['load_average_space'])
           maxProcValues[i]     = getBucketValue(bucket['max_processors_space'])
-          maxMachinesValues[i] = getBucketValue(bucket['max_machines_space'])
-          maxHS06Values[i]     = getBucketValue(bucket['max_hs06_space'])
 
           for j in bucket['factory']['buckets']:
             factoryLoadAvgLists[j['key']][i]         = getBucketValue(j['load_average'])
@@ -778,6 +770,7 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                   { 
                     "terms": { "field": "machinetype", "size": 99999, "order": { "sum_running_machines": "desc" } },
                     "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } },
+                               "sum_running_hs06"    : { "sum": { "field": "running_hs06" } },
                                "shutdown":
                                  {
                                    "top_hits": { "sort": { "shutdown_time": { "order": "desc" } },
@@ -907,20 +900,6 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                       fill=True, 
                       show_dots=False )
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False, legend_at_bottom_columns=4)
-    chart.htmlPrint()
-    
-    # Running HS06 by factory
-    
-    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
-    chart.title = 'Running HS06 by factory'
-    for j in fs['aggregations']['factory_names']['buckets']:
-      chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
-                      factoryRunningHS06Lists[j['key']], 
-                      fill=True, 
-                      show_dots=False )
-
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # Running processors by machinetype
@@ -948,21 +927,34 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
                    fill=True, 
                    show_dots=False )
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
+    print '<h2>From factories publishing HS06</h2>'
+
+    # Running HS06 by factory
+    
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
+    chart.title = 'Running HS06 by factory'
+    for j in fs['aggregations']['factory_names']['buckets']:
+      if j['sum_running_hs06']['value'] > 0.0:
+        chart.add( { 'title': j['key'].split('.')[0], 'xlink': {'href': '/%s/%s/%s/%s/' % (sizeTimeRangeVO, siteName, spaceName, j['key']) } },
+                     factoryRunningHS06Lists[j['key']], 
+                     fill=True, 
+                     show_dots=False )
+
+    chart.htmlPrint()
+    
     # Running HS06 by machinetype
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=4)
     chart.title = 'Running HS06 by machinetype'
     for j in ms['aggregations']['machinetype_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
+      if j['sum_running_hs06']['value'] > 0.0:
         chart.add( j['key'],
                    machinetypeRunningHS06Lists[j['key']],
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
     print '</div>'
@@ -1082,7 +1074,8 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                         "field": "space",
                         "size" : 99999,
                         "order" : { "_term" : "asc" }
-                      }
+                      },
+                    "aggs": { "sum_running_hs06": { "sum": { "field": "running_hs06" } } }
                   },
                 "site_histogram":
                   {
@@ -1102,25 +1095,19 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                             "aggs": { "factory": { "terms": { "field": "factory", "size" : 99999 },
                                                    "aggs":  { "max_processors":     { "avg": { "field" : "max_processors"     } },
                                                               "running_processors": { "avg": { "field" : "running_processors" } },
-                                                              "max_machines":       { "avg": { "field" : "max_machines"       } },
                                                               "running_machines":   { "avg": { "field" : "running_machines"   } },
-                                                              "max_hs06":           { "avg": { "field" : "max_hs06"           } },
                                                               "running_hs06":       { "avg": { "field" : "running_hs06"       } }
                                                             }
                                                  },
                                       "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
                                       "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
-                                      "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
                                       "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
-                                      "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
                                       "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
                                     }
                           },
                         "max_processors_site":     { "sum_bucket":  { "buckets_path": "space>max_processors_space"     } },
                         "running_processors_site": { "sum_bucket":  { "buckets_path": "space>running_processors_space" } },
-                        "max_machines_site":       { "sum_bucket":  { "buckets_path": "space>max_machines_space"       } },
                         "running_machines_site":   { "sum_bucket":  { "buckets_path": "space>running_machines_space"   } },
-                        "max_hs06_site":           { "sum_bucket":  { "buckets_path": "space>max_hs06_space"           } },
                         "running_hs06_site":       { "sum_bucket":  { "buckets_path": "space>running_hs06_space"       } }
                       }
                   }
@@ -1153,8 +1140,6 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
       print '</pre>'
     
     maxProcValues         = [0.0] * timeBuckets
-    maxMachinesValues     = [0.0] * timeBuckets
-    maxHS06Values         = [0.0] * timeBuckets
 
     spaceRunningProcLists = {}
     spaceRunningMachinesLists = {}
@@ -1171,8 +1156,6 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
       
         if i >= 0 and i < timeBuckets:
            maxProcValues[i]     = getBucketValue(bucket['max_processors_site'])
-           maxMachinesValues[i] = getBucketValue(bucket['max_machines_site'])
-           maxHS06Values[i]     = getBucketValue(bucket['max_hs06_site'])
 
            for j in bucket['space']['buckets']:
              spaceRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_space'])
@@ -1198,7 +1181,9 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                 "vo_names":
                   { 
                     "terms": { "field": "vo", "size": 99999, "order": { "sum_running_machines": "desc" } },
-                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
+                    "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } },
+                               "sum_running_hs06": { "sum": { "field": "running_hs06" } } 
+                             }
                   },
                 "vo_histogram": 
                   {
@@ -1329,21 +1314,6 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                       fill=True, 
                       show_dots=False)
 
-#    chart.add('Max machines',  maxMachinesValues, fill=False, show_dots=False)
-    chart.htmlPrint()
-    
-    # HS06 running at this site
-
-    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running HS06 by space'
-
-    for j in fs['aggregations']['space_names']['buckets']:
-      chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
-                      spaceRunningHS06Lists[j['key']],
-                      fill=True, 
-                      show_dots=False)
-
-    chart.add('Max HS06',  maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # Running processors by VO
@@ -1371,21 +1341,35 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                    fill=True, 
                    show_dots=False )
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
+    print '<h2>From spaces publishing HS06</h2>'
+
+    # HS06 running at this site
+
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
+    chart.title = 'Running HS06 by space'
+
+    for j in fs['aggregations']['space_names']['buckets']:
+      if j['sum_running_hs06']['value'] > 0.0:
+        chart.add( { 'title': j['key'], 'xlink': {'href': '/%s/%s/%s/' % (sizeTimeRangeVO, siteName, j['key']) } },
+                      spaceRunningHS06Lists[j['key']],
+                      fill=True, 
+                      show_dots=False)
+
+    chart.htmlPrint()
+    
     # Running HS06 by VO
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
     chart.title = 'Running HS06 by VO'
     for j in ms['aggregations']['vo_names']['buckets']:
-      if j['sum_running_machines']['value'] > 0.0:
+      if j['sum_running_hs06']['value'] > 0.0:
         chart.add( j['key'],
                    voRunningHS06Lists[j['key']],
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
 
     print '</div>'
@@ -1427,7 +1411,9 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                 "site_names":
                   {
                     "terms": { "field": "site", "size" : 99999, "order" : { "sum_running_machines" : "desc" } },
-                               "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } } }
+                               "aggs":  { "sum_running_machines": { "sum": { "field": "running_machines" } },
+                                          "sum_running_hs06"    : { "sum": { "field": "running_hs06" } } 
+                                        }
                   },
                 "all_histogram":
                   {
@@ -1458,33 +1444,25 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                                                 "time_average":       { "avg": { "field" : "time_received"      } },
                                                 "max_processors":     { "avg": { "field" : "max_processors"     } },
                                                 "running_processors": { "avg": { "field" : "running_processors" } },
-                                                "max_machines":       { "avg": { "field" : "max_machines"       } },
                                                 "running_machines":   { "avg": { "field" : "running_machines"   } },
-                                                "max_hs06":           { "avg": { "field" : "max_hs06"           } },
                                                 "running_hs06":       { "avg": { "field" : "running_hs06"       } }
                                               }
                                           },
                                         "max_processors_space":     { "sum_bucket": { "buckets_path": "factory>max_processors"     } },
                                         "running_processors_space": { "sum_bucket": { "buckets_path": "factory>running_processors" } },
-                                        "max_machines_space":       { "sum_bucket": { "buckets_path": "factory>max_machines"       } },
                                         "running_machines_space":   { "sum_bucket": { "buckets_path": "factory>running_machines"   } },
-                                        "max_hs06_space":           { "sum_bucket": { "buckets_path": "factory>max_hs06"           } },
                                         "running_hs06_space":       { "sum_bucket": { "buckets_path": "factory>running_hs06"       } }
                                       }
                                   },
                                 "max_processors_site":     { "sum_bucket": { "buckets_path": "space>max_processors_space"     } },
                                 "running_processors_site": { "sum_bucket": { "buckets_path": "space>running_processors_space" } },
-                                "max_machines_site":       { "sum_bucket": { "buckets_path": "space>max_machines_space"       } },
                                 "running_machines_site":   { "sum_bucket": { "buckets_path": "space>running_machines_space"   } },
-                                "max_hs06_site":           { "sum_bucket": { "buckets_path": "space>max_hs06_space"           } },
                                 "running_hs06_site":       { "sum_bucket": { "buckets_path": "space>running_hs06_space"       } }
                               }
                           },
                         "max_processors_all":     { "sum_bucket": { "buckets_path": "site>max_processors_site"     } },
                         "running_processors_all": { "sum_bucket": { "buckets_path": "site>running_processors_site" } },
-                        "max_machines_all":       { "sum_bucket": { "buckets_path": "site>max_machines_site"       } },
                         "running_machines_all":   { "sum_bucket": { "buckets_path": "site>running_machines_site"   } },
-                        "max_hs06_all":           { "sum_bucket": { "buckets_path": "site>max_hs06_site"           } },
                         "running_hs06_all":       { "sum_bucket": { "buckets_path": "site>running_hs06_site"       } }
                       }
                   }
@@ -1517,8 +1495,6 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
       print '</pre>'
     
     maxProcValues         = [0.0] * timeBuckets
-    maxMachinesValues     = [0.0] * timeBuckets
-    maxHS06Values         = [0.0] * timeBuckets
 
     siteRunningProcLists = {}
     siteRunningMachinesLists = {}
@@ -1534,8 +1510,6 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
 
       if i >= 0 and i < timeBuckets:
          maxProcValues[i]     = getBucketValue(bucket['max_processors_all'])
-         maxMachinesValues[i] = getBucketValue(bucket['max_machines_all'])
-         maxHS06Values[i]     = getBucketValue(bucket['max_hs06_all'])
 
          for j in bucket['site']['buckets']:
            siteRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_site'])
@@ -1695,23 +1669,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                       fill=True, 
                       show_dots=False)
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
-    # HS06 running at all sites
-
-    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
-    chart.title = 'Running HS06 by site'
-
-    for j in fs['aggregations']['site_names']['buckets']:
-      chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
-                      siteRunningHS06Lists[j['key']],
-                      fill=True, 
-                      show_dots=False)
-
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
-    chart.htmlPrint()
-
     # Running processors by VO at all sites
     
     chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets)
@@ -1737,7 +1696,22 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                    fill=True, 
                    show_dots=False )
 
-#    chart.add('Max machines', maxMachinesValues, fill=False, show_dots=False)
+    chart.htmlPrint()
+
+    print '<h2>From sites publishing HS06</h2>'
+
+    # HS06 running at all sites
+
+    chart = VacMonStackedLine(imageSize, timeSpan, timeEnd, timeBuckets, legend_at_bottom_columns=2)
+    chart.title = 'Running HS06 by site'
+
+    for j in fs['aggregations']['site_names']['buckets']:
+      if j['sum_running_hs06']['value'] > 0.0:
+        chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+                      siteRunningHS06Lists[j['key']],
+                      fill=True, 
+                      show_dots=False)
+
     chart.htmlPrint()
 
     # Running HS06 by VO at all sites
@@ -1751,7 +1725,6 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max HS06', maxHS06Values, fill=False, show_dots=False)
     chart.htmlPrint()
 
     print '</div>'

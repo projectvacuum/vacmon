@@ -33,9 +33,12 @@
 
 include VERSION
 
+WWW_FILES=cal20px.png header.html footer.html vaclogowhite.png \
+          index.html CalendarPopup.js robots.txt
+
 INSTALL_FILES=vacmond vacmond.init VERSION vacmond.logrotate \
-          CHANGES vacutils.py __init__.py \
-          header.html footer.html vaclogowhite.png
+          CHANGES vacutils.py __init__.py vacmon-cgi \
+          $(WWW_FILES)
           
 TGZ_FILES=$(INSTALL_FILES) Makefile vacmon.spec
 
@@ -54,7 +57,7 @@ install: $(INSTALL_FILES)
 	         $(RPM_BUILD_ROOT)/etc/rc.d/init.d \
 	         $(RPM_BUILD_ROOT)/etc/logrotate.d \
 	         $(RPM_BUILD_ROOT)/var/www/vacmon 	         
-	cp vacmond \
+	cp vacmond vacmon-cgi \
            $(RPM_BUILD_ROOT)/usr/sbin
 	cp __init__.py vacutils.py \
            $(RPM_BUILD_ROOT)$(PYTHON_SITEARCH)/vacmon
@@ -62,7 +65,7 @@ install: $(INSTALL_FILES)
 	   $(RPM_BUILD_ROOT)/etc/rc.d/init.d/vacmond
 	cp vacmond.logrotate \
 	   $(RPM_BUILD_ROOT)/etc/logrotate.d/vacmond
-	cp header.html footer.html vaclogowhite.png \
+	cp $(WWW_FILES) \
 	   $(RPM_BUILD_ROOT)/var/www/vacmon
 	
 rpm: vacmon.tgz

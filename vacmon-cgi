@@ -34,20 +34,29 @@
 #  Contacts: Andrew.McNab@cern.ch  http://www.gridpp.ac.uk/vacproject/
 #
 
+# First two modules installed with:
+#
+# pip install pygal
+# pip install elasticsearch
+#
+import pygal
+import elasticsearch
+
 import os
 import cgi
 import sys
 import time
 import json
-import pygal
 import string
 import pprint
-import elasticsearch
 
 import vacmon
 
 esDebug   = False
 esTimeout = 60
+
+# On the all sites page, we ignore these "sites" which are due to initial testing
+sitesIgnoreList = [ 'gridpp.ac.uk', 'lhcb.cern.ch', 'tier2.hep.manchester.ac.uk' ]
 
 class VacMonStackedLine(pygal.StackedLine):
 
@@ -978,23 +987,29 @@ def oneSpace(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO,
        
        for i in ('load_average', 'running_processors', 'running_machines',
                  'time_received', 'daemon_version', 'boot_time', 'os_issue'):
-         print '</td><td class="vacmon">'
-         
+                 
+         print '</td>'
+
          try:
            s = j['factory_status']['hits']['hits'][0]['fields'][i][0]
          except:
-           s = ' - '
+           print '<td class="vacmon"> - '
          else:
            if 'time' in i:
-             s = vacmon.vacutils.secondsToString(s / 1000)
+             ss = vacmon.vacutils.secondsToString(s / 1000)
            elif i == 'daemon_version':
-             s = s.replace(' vacd-factory','').replace(' vcycled','')
+             ss = s.replace(' vacd-factory','').replace(' vcycled','')
            elif i.startswith('running_'):
              t = j['factory_status']['hits']['hits'][0]['fields'][i.replace('running_','max_')][0]
-             s = '%d/%d' % (s, t)
+             ss = '%d/%d' % (s, t)
+           else:
+             ss = s
 
-         print s
-
+           if i == 'time_received' and s < 1000 * (time.time() - 3600):
+             print '<td class="vacmon" style="background: #ffdddd">' + str(ss)
+           else:
+             print '<td class="vacmon">' + str(ss)
+             
        print '</td></tr>'
 
     print '</table>'
@@ -1501,9 +1516,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     siteRunningHS06Lists = {}
 
     for j in fs['aggregations']['site_names']['buckets']:
-      siteRunningProcLists[j['key']]     = [0.0] * timeBuckets
-      siteRunningMachinesLists[j['key']] = [0.0] * timeBuckets
-      siteRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
+      if j['key'] not in sitesIgnoreList:
+        siteRunningProcLists[j['key']]     = [0.0] * timeBuckets
+        siteRunningMachinesLists[j['key']] = [0.0] * timeBuckets
+        siteRunningHS06Lists[j['key']]     = [0.0] * timeBuckets
 
     for bucket in fs['aggregations']['all_histogram']['buckets']:
       i = int( ((bucket['key'] / 1000) - (timeEnd - timeSpan)) / (timeSpan / timeBuckets) )
@@ -1512,9 +1528,10 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
          maxProcValues[i]     = getBucketValue(bucket['max_processors_all'])
 
          for j in bucket['site']['buckets']:
-           siteRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_site'])
-           siteRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_site'])
-           siteRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_site'])
+           if j['key'] not in sitesIgnoreList:
+             siteRunningProcLists[j['key']][i]     = getBucketValue(j['running_processors_site'])
+             siteRunningMachinesLists[j['key']][i] = getBucketValue(j['running_machines_site'])
+             siteRunningHS06Lists[j['key']][i]     = getBucketValue(j['running_hs06_site'])
 
     machinetypesSearch =  """{
             "query": 
@@ -1640,7 +1657,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     print '<p><b>Site:</b> '
 
     for j in fs['aggregations']['site_names']['buckets']:
-      print ' <input type="button" value="%s" onclick="window.location.href=\'/%s/%s/\'"> ' % (j['key'], sizeTimeRangeVO, j['key'])
+      if j['key'] not in sitesIgnoreList:
+        print ' <input type="button" value="%s" onclick="window.location.href=\'/%s/%s/\'"> ' % (j['key'], sizeTimeRangeVO, j['key'])
 
     print '</p>'
  
@@ -1650,7 +1668,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.title = 'Running processors by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
-      chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+      if j['key'] not in sitesIgnoreList:
+        chart.add( { 'title': j['key'], 'xlink': { 'href':'/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningProcLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -1664,7 +1683,8 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.title = 'Running machines by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
-      chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
+      if j['key'] not in sitesIgnoreList:
+        chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningMachinesLists[j['key']],
                       fill=True, 
                       show_dots=False)
@@ -1706,7 +1726,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
     chart.title = 'Running HS06 by site'
 
     for j in fs['aggregations']['site_names']['buckets']:
-      if j['sum_running_hs06']['value'] > 0.0:
+      if j['key'] not in sitesIgnoreList and j['sum_running_hs06']['value'] > 0.0:
         chart.add( { 'title': j['key'], 'xlink': { 'href': '/%s/%s/' % (sizeTimeRangeVO, j['key']) } },
                       siteRunningHS06Lists[j['key']],
                       fill=True, 

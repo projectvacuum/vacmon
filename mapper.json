@@ -13,20 +13,20 @@
             "format" : "epoch_second"
           },
           "cookie" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "factory" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "factory_heartbeat_time" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
           "kernel_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "load_average" : {
             "type" : "double"
@@ -38,8 +38,8 @@
             "type" : "long"
           },
           "message_type" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "metadata_heartbeat_time" : {
             "type"   : "date",
@@ -50,8 +50,8 @@
             "format" : "epoch_second"
           },
           "os_issue" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "responder_heartbeat_time" : {
             "type"   : "date",
@@ -73,12 +73,12 @@
             "type" : "long"
           },
           "site" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "space" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "swap_free_kb" : {
             "type" : "long"
@@ -106,12 +106,12 @@
             "type" : "long"
           },
           "daemon_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "vacquery_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           }
         }
       },
@@ -124,28 +124,28 @@
             "format" : "epoch_second"
           },
           "cookie" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "daemon_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "factory" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "fqan" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "machinetype" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "message_type" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "num_before_fizzle" : {
             "type" : "long"
@@ -154,24 +154,24 @@
             "type" : "long"
           },
           "shutdown_machine" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "shutdown_message" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "shutdown_time" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
           "site" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "space" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "time_sent" : {
             "type"   : "date",
@@ -187,12 +187,12 @@
             "type" : "long"
           },
           "vacquery_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "vo" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           }
         }
       },
@@ -205,8 +205,8 @@
             "format" : "epoch_second"
           },
           "cookie" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "created_time" : {
             "type"   : "date",
@@ -219,16 +219,16 @@
             "type" : "long"
           },
           "daemon_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "factory" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "fqan" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "heartbeat_time" : {
             "type"   : "date",
@@ -238,20 +238,20 @@
             "type" : "double"
           },
           "machine" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "machinetype" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "machine_model" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "message_type" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "num_machines" : {
             "type" : "long"
@@ -260,44 +260,44 @@
             "type" : "long"
           },
           "shutdown_message" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "shutdown_time" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
           "site" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "space" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "started_time" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
           "state" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "time_sent" : {
             "type"   : "date",
             "format" : "epoch_second"
           },
           "uuid" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "vacquery_version" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           },
           "vo" : {
-            "type" : "text",
-            "index" : "not_analyzed"
+            "type" : "keyword",
+            "index" : "true"
           }
         }
       }

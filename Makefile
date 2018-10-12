@@ -1,6 +1,6 @@
 #
 #  Andrew McNab, University of Manchester.
-#  Copyright (c) 2013-6. All rights reserved.
+#  Copyright (c) 2013-8. All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or
 #  without modification, are permitted provided that the following
@@ -38,7 +38,7 @@ WWW_FILES=cal20px.png header.html footer.html vaclogowhite.png \
 
 INSTALL_FILES=vacmond vacmond.init VERSION vacmond.logrotate \
           CHANGES vacutils.py __init__.py vacmon-cgi \
-          $(WWW_FILES)
+          $(WWW_FILES) vacmon.httpd.inc vacmon.httpd.conf
           
 TGZ_FILES=$(INSTALL_FILES) Makefile vacmon.spec
 
@@ -56,7 +56,8 @@ install: $(INSTALL_FILES)
                  $(RPM_BUILD_ROOT)$(PYTHON_SITEARCH)/vacmon \
 	         $(RPM_BUILD_ROOT)/etc/rc.d/init.d \
 	         $(RPM_BUILD_ROOT)/etc/logrotate.d \
-	         $(RPM_BUILD_ROOT)/var/www/vacmon 	         
+	         $(RPM_BUILD_ROOT)/var/www/vacmon \
+	         $(RPM_BUILD_ROOT)/etc/httpd/includes
 	cp vacmond vacmon-cgi \
            $(RPM_BUILD_ROOT)/usr/sbin
 	cp __init__.py vacutils.py \
@@ -65,6 +66,8 @@ install: $(INSTALL_FILES)
 	   $(RPM_BUILD_ROOT)/etc/rc.d/init.d/vacmond
 	cp vacmond.logrotate \
 	   $(RPM_BUILD_ROOT)/etc/logrotate.d/vacmond
+	cp vacmon.httpd.inc \
+	   $(RPM_BUILD_ROOT)/etc/httpd/includes/vacmin.httpd.inc
 	cp $(WWW_FILES) \
 	   $(RPM_BUILD_ROOT)/var/www/vacmon
 	

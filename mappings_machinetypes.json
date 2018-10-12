@@ -1,0 +1,85 @@
+{
+    "mappings" : {
+      "machinetypes" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
+        "properties" : {
+          "time_received" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "daemon_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "factory" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "fqan" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "machinetype" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "message_type" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "num_before_fizzle" : {
+            "type" : "long"
+          },
+          "num_machinetypes" : {
+            "type" : "long"
+          },
+          "shutdown_machine" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "shutdown_message" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "shutdown_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "site" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "space" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "running_hs06" : {
+            "type" : "double"
+          },
+          "running_machines" : {
+            "type" : "long"
+          },
+          "running_processors" : {
+            "type" : "long"
+          },
+          "vacquery_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "vo" : {
+            "type" : "keyword",
+            "index" : "true"
+          }
+        }
+      }
+    }
+}

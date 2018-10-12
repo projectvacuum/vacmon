@@ -1,6 +1,6 @@
 {
     "mappings" : {
-      "factories" : {
+      "_doc" : {
         "_source": { "enabled": false },
         "_all": { "enabled": false },
         "properties" : {

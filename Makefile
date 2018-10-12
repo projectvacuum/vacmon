@@ -68,7 +68,7 @@ install: $(INSTALL_FILES)
 	   $(RPM_BUILD_ROOT)/etc/logrotate.d/vacmond
 	cp vacmon.httpd.inc \
 	   $(RPM_BUILD_ROOT)/etc/httpd/includes/vacmin.httpd.inc
-	cp $(WWW_FILES) \
+	cp $(WWW_FILES) VERSION \
 	   $(RPM_BUILD_ROOT)/var/www/vacmon
 	
 rpm: vacmon.tgz

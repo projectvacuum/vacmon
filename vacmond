@@ -47,24 +47,27 @@ import vacmon
 
 def processFactory(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/factories/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/factories/_doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
+   curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
    curl.perform()
    print
    
 def processMachinetype(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/machinetypes/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/machinetypes/_doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
+   curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
    curl.perform()
    print
 
 def processMachine(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/machines/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/machines/_doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
+   curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
    curl.perform()
    print
@@ -80,7 +83,7 @@ def vacmonListener():
    se = file('/var/log/vacmond', 'a+', 0)
    os.dup2(se.fileno(), sys.stderr.fileno())
  
-   vacmon.vacutils.createFile('/var/run/vacmond.pid', str(os.getpid()) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/tmp')
+   vacmon.vacutils.createFile('/var/run/vacmond.pid', str(os.getpid()) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/var/run')
 
    sock = None
    curl = pycurl.Curl()
@@ -139,7 +142,7 @@ def vacmonListener():
      sys.stderr.flush()
 
      # Update heartbeat file
-     vacmon.vacutils.createFile('/var/run/vacmond.heartbeat', str(int(time.time())) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/tmp')
+     vacmon.vacutils.createFile('/var/run/vacmond.heartbeat', str(int(time.time())) + '\n', stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/var/run')
 
      try:
        jsonMessage, addr = sock.recvfrom(10240)

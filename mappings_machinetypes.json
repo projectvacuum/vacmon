@@ -1,6 +1,6 @@
 {
     "mappings" : {
-      "_doc" : {
+      "doc" : {
         "_source": { "enabled": false },
         "_all": { "enabled": false },
         "properties" : {

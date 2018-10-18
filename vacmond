@@ -47,7 +47,7 @@ import vacmon
 
 def processFactory(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/factories/_doc/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/factories/doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
    curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
@@ -56,7 +56,7 @@ def processFactory(curl, jsonMessage, id):
    
 def processMachinetype(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/machinetypes/_doc/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/machinetypes/doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
    curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)
@@ -65,7 +65,7 @@ def processMachinetype(curl, jsonMessage, id):
 
 def processMachine(curl, jsonMessage, id):
 
-   curl.setopt(pycurl.URL, 'http://localhost:9200/machines/_doc/' + id)
+   curl.setopt(pycurl.URL, 'http://localhost:9200/machines/doc/' + id)
    curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
    curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
    curl.setopt(pycurl.POSTFIELDS, jsonMessage)

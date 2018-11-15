@@ -9,7 +9,7 @@ Source: vacmon.tgz
 URL: http://www.gridpp.ac.uk/vac/
 Vendor: GridPP
 Packager: Andrew McNab <Andrew.McNab@cern.ch>
-Requires: m2crypto,java-headless,elasticsearch,httpd
+Requires: m2crypto,java-headless,elasticsearch,httpd,mod_ssl,mailcap
 
 %description
 Vacmon is a monitoring daemon for Vac

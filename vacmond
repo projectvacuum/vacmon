@@ -45,6 +45,337 @@ import pycurl
 
 import vacmon
 
+mappings = {
+ "machines":
+  {
+    "mappings" : {
+      "doc" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
+        "properties" : {
+          "time_received" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "created_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cpu_percentage" : {
+            "type" : "double"
+          },
+          "cpu_seconds" : {
+            "type" : "long"
+          },
+          "daemon_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "factory" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "fqan" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "hs06" : {
+            "type" : "double"
+          },
+          "machine" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "machinetype" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "machine_model" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "message_type" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "num_machines" : {
+            "type" : "long"
+          },
+          "num_processors" : {
+            "type" : "long"
+          },
+          "shutdown_message" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "shutdown_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "site" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "space" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "started_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "state" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "uuid" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "vacquery_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "vo" : {
+            "type" : "keyword",
+            "index" : "true"
+          }
+        }
+      }
+    }
+  },
+ "machinetypes":
+  {
+    "mappings" : {
+      "doc" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
+        "properties" : {
+          "time_received" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "daemon_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "factory" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "fqan" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "machinetype" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "message_type" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "num_before_fizzle" : {
+            "type" : "long"
+          },
+          "num_machinetypes" : {
+            "type" : "long"
+          },
+          "shutdown_machine" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "shutdown_message" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "shutdown_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "site" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "space" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "running_hs06" : {
+            "type" : "double"
+          },
+          "running_machines" : {
+            "type" : "long"
+          },
+          "running_processors" : {
+            "type" : "long"
+          },
+          "vacquery_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "vo" : {
+            "type" : "keyword",
+            "index" : "true"
+          }
+        }
+      }
+    }
+  },
+ "factories":
+  {
+    "mappings" : {
+      "doc" : {
+        "_source": { "enabled": false },
+        "_all": { "enabled": false },
+        "properties" : {
+          "time_received" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "boot_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "cookie" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "factory" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "factory_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "kernel_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "load_average" : {
+            "type" : "double"
+          },
+          "mem_total_kb" : {
+            "type" : "long"
+          },
+          "mem_used_kb" : {
+            "type" : "long"
+          },
+          "message_type" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "metadata_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "mjf_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "os_issue" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "responder_heartbeat_time" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "root_disk_avail_inodes" : {
+            "type" : "long"
+          },
+          "root_disk_avail_kb" : {
+            "type" : "long"
+          },
+          "running_processors" : {
+            "type" : "long"
+          },
+          "running_hs06" : {
+            "type" : "double"
+          },
+          "running_machines" : {
+            "type" : "long"
+          },
+          "site" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "space" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "swap_free_kb" : {
+            "type" : "long"
+          },
+          "swap_used_kb" : {
+            "type" : "long"
+          },
+          "time_sent" : {
+            "type"   : "date",
+            "format" : "epoch_second"
+          },
+          "max_processors" : {
+            "type" : "long"
+          },
+          "max_hs06" : {
+            "type" : "double"
+          },
+          "max_machines" : {
+            "type" : "long"
+          },
+          "daemon_disk_avail_inodes" : {
+            "type" : "long"
+          },
+          "daemon_disk_avail_kb" : {
+            "type" : "long"
+          },
+          "daemon_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          },
+          "vacquery_version" : {
+            "type" : "keyword",
+            "index" : "true"
+          }
+        }
+      }      
+    }
+  }
+};
+
+def createIndexes(curl):
+   # Try to create indexes in case they don't already exist
+
+   for indexName in mappings:
+   
+     curl.setopt(pycurl.URL, 'http://localhost:9200/' + indexName)
+     curl.setopt(pycurl.CUSTOMREQUEST, "PUT")
+     curl.setopt(pycurl.HTTPHEADER, ["Content-type: application/json"])
+     curl.setopt(pycurl.POSTFIELDS, json.dumps(mappings[indexName]))
+     curl.perform()
+     print
+   
 def processFactory(curl, jsonMessage, id):
 
    curl.setopt(pycurl.URL, 'http://localhost:9200/factories/doc/' + id)
@@ -91,6 +422,9 @@ def vacmonListener():
    vacmon.vacutils.logLine('vacmon listener starts')
    
    vacmon.vacutils.setProcessName('vacmond')
+
+   vacmon.vacutils.logLine('Create indexes if not already defined')
+   createIndexes()
 
    n = 0
 

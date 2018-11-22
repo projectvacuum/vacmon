@@ -19,7 +19,7 @@ vacmond should create its ElasticSearch indexes when it starts. If they need
 to be deleted and this repeated, then do 
 
 curl -X DELETE "localhost:9200/machines"  
-curl -X DELETE "localhost:9200/factories"  
+curl -X DELETE "localhost:9200/machinetypes"  
 curl -X DELETE "localhost:9200/factories"  
 
 If you need to create a network alias add one, like:

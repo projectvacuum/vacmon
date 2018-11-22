@@ -230,6 +230,21 @@ mappings = {
           "running_processors" : {
             "type" : "long"
           },
+          "max_wallclock_seconds" : {
+            "type" : "long"
+          },
+          "min_wallclock_seconds" : {
+            "type" : "long"
+          },
+          "max_processors" : {
+            "type" : "long"
+          },
+          "min_processors" : {
+            "type" : "long"
+          },
+          "bytes_per_processor" : {
+            "type" : "long"
+          },
           "vacquery_version" : {
             "type" : "keyword",
             "index" : "true"

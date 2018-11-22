@@ -57,7 +57,8 @@ install: $(INSTALL_FILES)
 	         $(RPM_BUILD_ROOT)/etc/rc.d/init.d \
 	         $(RPM_BUILD_ROOT)/etc/logrotate.d \
 	         $(RPM_BUILD_ROOT)/var/www/vacmon \
-	         $(RPM_BUILD_ROOT)/etc/httpd/includes
+	         $(RPM_BUILD_ROOT)/etc/httpd/includes \
+	         $(RPM_BUILD_ROOT)/etc/httpd/conf
 	cp vacmond vacmon-cgi \
            $(RPM_BUILD_ROOT)/usr/sbin
 	cp __init__.py vacutils.py \
@@ -67,7 +68,9 @@ install: $(INSTALL_FILES)
 	cp vacmond.logrotate \
 	   $(RPM_BUILD_ROOT)/etc/logrotate.d/vacmond
 	cp vacmon.httpd.inc \
-	   $(RPM_BUILD_ROOT)/etc/httpd/includes/vacmin.httpd.inc
+	   $(RPM_BUILD_ROOT)/etc/httpd/includes/vacmon.httpd.inc
+	cp vacmon.httpd.conf \
+	   $(RPM_BUILD_ROOT)/etc/httpd/conf/vacmon.httpd.conf
 	cp $(WWW_FILES) VERSION \
 	   $(RPM_BUILD_ROOT)/var/www/vacmon
 	

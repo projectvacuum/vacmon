@@ -50,8 +50,8 @@ mappings = {
   {
     "mappings" : {
       "doc" : {
-        "_source": { "enabled": false },
-        "_all": { "enabled": false },
+        "_source": { "enabled": False },
+        "_all": { "enabled": False },
         "properties" : {
           "time_received" : {
             "type"   : "date",
@@ -160,8 +160,8 @@ mappings = {
   {
     "mappings" : {
       "doc" : {
-        "_source": { "enabled": false },
-        "_all": { "enabled": false },
+        "_source": { "enabled": False },
+        "_all": { "enabled": False },
         "properties" : {
           "time_received" : {
             "type"   : "date",
@@ -246,8 +246,8 @@ mappings = {
   {
     "mappings" : {
       "doc" : {
-        "_source": { "enabled": false },
-        "_all": { "enabled": false },
+        "_source": { "enabled": False },
+        "_all": { "enabled": False },
         "properties" : {
           "time_received" : {
             "type"   : "date",
@@ -424,7 +424,7 @@ def vacmonListener():
    vacmon.vacutils.setProcessName('vacmond')
 
    vacmon.vacutils.logLine('Create indexes if not already defined')
-   createIndexes()
+   createIndexes(curl)
 
    n = 0
 

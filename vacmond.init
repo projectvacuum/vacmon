@@ -12,6 +12,9 @@ start() {
 	[ "$EUID" != "0" ] && exit 1
 	[ -x /usr/sbin/vacmond ] || exit 2
 
+        # Force httpd to use our httpd.conf
+        cp -f /etc/httpd/conf/vacmon.httpd.conf /etc/httpd/conf/httpd.conf
+
         # Start daemon
         echo -n $"Starting vacmond: "
         daemon /usr/sbin/vacmond

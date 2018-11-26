@@ -58,3 +58,32 @@ ScriptAliasMatch ^/.*/.*  /usr/sbin/vacmon-cgi
 ScriptAliasMatch ^/[^.]*$ /usr/sbin/vacmon-cgi
 
 </VirtualHost>
+
+<VirtualHost vacjson.gridpp.ac.uk:443>
+ServerName   vacjson.gridpp.ac.uk
+DocumentRoot /var/www/vacmon
+CustomLog    logs/https-vacjson.log combined
+
+<Directory /var/www/vacmon>
+Options Indexes
+</Directory>
+
+ScriptAliasMatch ^/.*/.*  /usr/sbin/vacjson-cgi
+ScriptAliasMatch ^/[^.]*$ /usr/sbin/vacjson-cgi
+
+SSLEngine               on
+SSLCertificateFile      /etc/grid-security/vacjson.gridpp.ac.uk.cert.pem
+SSLCertificateKeyFile   /etc/grid-security/vacjson.gridpp.ac.uk.key.pem
+SSLCACertificatePath    /etc/grid-security/certificates
+#SSLCARevocationPath    YOUR CRL DIRECTORY WOULD GO HERE
+SSLVerifyClient         none
+SSLVerifyDepth          10
+SSLOptions              +StdEnvVars
+</VirtualHost>
+
+<VirtualHost vacjson.gridpp.ac.uk:80>
+ServerName   vacjson.gridpp.ac.uk
+DocumentRoot /var/www/vacmon
+CustomLog    logs/http--vacjson.log combined
+Redirect     / https://vacjson.gridpp.ac.uk/
+</VirtualHost>

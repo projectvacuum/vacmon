@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  vac-crr-json-cgi - Vac CRR JSON CGI script
+#  vacjson-cgi - Vac CRR JSON CGI script
 #
 #  Andrew McNab, University of Manchester.
 #  Copyright (c) 2015-8. All rights reserved.
@@ -43,6 +43,7 @@ import elasticsearch
 import os
 import cgi
 import sys
+import stat
 import time
 import json
 import string
@@ -50,24 +51,125 @@ import pprint
 
 import vacmon
 
-esDebug   = True
+esDebug   = False
 esTimeout = 120
+timeSpan  = 86400
 
-def htmlHeader(title, selector=True):
+def htmlHeader(title):
   print 'Status: 200 OK'
   print 'Content-Type: text/html'
   print
   print '<html><head><title>' + title + '</title>'
-
-  print open('/var/www/vacmon/header.html', 'r').read()
+  print '</head><body>'
+#  print open('/var/www/vacmon/vacjson-header.html', 'r').read()
 
 def htmlFooter():
-  print open('/var/www/vacmon/footer.html', 'r').read()
+#  print open('/var/www/vacmon/vacjson-footer.html', 'r').read()
+  print '</body>'
   print '</html>'
 
-def saveCrrJson(siteName, spaceName):
+def listSites():
+  htmlHeader('VacJson')
 
-  timeSpan = 86400
+  es = elasticsearch.Elasticsearch(timeout = esTimeout)
+
+  sitesSearch =  """
+{
+  "query": 
+    {
+      "bool":
+        {
+          "filter":
+            [
+              { "range": { "time_received": { "from": %ld } } }
+            ]
+        }
+    },
+
+  "aggs": 
+    {
+      "sites":
+        {
+          "terms":
+            {
+              "field": "site",
+              "size" : 99999,
+              "order" : { "_term" : "asc" }
+            }
+        }
+    }    
+}
+""" % (int(time.time()) - timeSpan)
+
+  ss = es.search(
+          index       = 'factories',
+          size        = 0,
+          body        = sitesSearch)
+
+  if esDebug:
+      print '<pre>'
+      pprint.pprint(json.loads(sitesSearch))
+      print
+      pprint.pprint(ss)
+      print '</pre>'
+
+  for j in ss['aggregations']['sites']['buckets']:
+    print '<a href="/%s/">%s</a><br>' % (str(j['key']), str(j['key']))
+
+  htmlFooter()
+
+def listSpaces(siteName):
+  htmlHeader('VacJson')
+
+  es = elasticsearch.Elasticsearch(timeout = esTimeout)
+
+  spacesSearch =  """
+{
+  "query": 
+    {
+      "bool":
+        {
+          "filter":
+            [
+              { "range": { "time_received": { "from": %ld } } },
+              { "match": { "site": "%s" } }
+            ]
+        }
+    },
+
+  "aggs": 
+    {
+      "spaces":
+        {
+          "terms":
+            {
+              "field": "space",
+              "size" : 99999,
+              "order" : { "_term" : "asc" }
+            }
+        }
+    }    
+}
+""" % (int(time.time()) - timeSpan, siteName)
+
+  ss = es.search(
+          index       = 'factories',
+          size        = 0,
+          body        = spacesSearch)
+
+  if esDebug:
+      print '<pre>'
+      pprint.pprint(json.loads(spacesSearch))
+      print
+      pprint.pprint(ss)
+      print '</pre>'
+
+  for j in ss['aggregations']['spaces']['buckets']:
+    print '<a href="/%s/%s/crr.json">%s/%s</a><br>' % (siteName, str(j['key']), siteName, str(j['key']))
+
+  htmlFooter()
+
+def saveCrrJson(siteName, spaceName):
 
   es = elasticsearch.Elasticsearch(timeout = esTimeout)
   
@@ -118,7 +220,7 @@ def saveCrrJson(siteName, spaceName):
           size        = 0,
           body        = factoriesSearch)
 
-  print '<!-- fs took %d -->' % fs['took']
+#  print '<!-- fs took %d -->' % fs['took']
 
   if esDebug:
       print '<pre>'
@@ -127,7 +229,7 @@ def saveCrrJson(siteName, spaceName):
       pprint.pprint(fs)
       print '</pre>'
 
-  es = elasticsearch.Elasticsearch(timeout = esTimeout)
+#  es = elasticsearch.Elasticsearch(timeout = esTimeout)
   
   machinetypesSearch =  """
 {
@@ -176,7 +278,7 @@ def saveCrrJson(siteName, spaceName):
           size        = 0,
           body        = machinetypesSearch)
 
-  print '<!-- ms took %d -->' % fs['took']
+#  print '<!-- ms took %d -->' % fs['took']
 
   if esDebug:
       print '<pre>'
@@ -198,8 +300,15 @@ def saveCrrJson(siteName, spaceName):
       daemonVersion = str(j['most_recent_message']['hits']['hits'][0]['fields']['daemon_version'][0])
       timeReceived  = j['most_recent_message']['hits']['hits'][0]['fields']['time_received'][0]
 
-    totalHS06       += j['most_recent_message']['hits']['hits'][0]['fields']['max_hs06'][0]
-    totalProcessors += j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+    try:
+      totalHS06       += j['most_recent_message']['hits']['hits'][0]['fields']['max_hs06'][0]
+    except:
+      pass
+    
+    try:
+      totalProcessors += j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+    except:
+      pass
 
   # Shares (queues) from machinetypes
   
@@ -214,9 +323,16 @@ def saveCrrJson(siteName, spaceName):
     except:
       pass
     
-    shares[shareName]['maxwallclockseconds'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] 
-    shares[shareName]['maxmemorybytes']      = ( j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
-                                               * j['most_recent_message']['hits']['hits'][0]['fields']['bytes_per_processor'][0] )
+    try:
+      shares[shareName]['maxwallclockseconds'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] 
+    except:
+      pass
+      
+    try:
+      shares[shareName]['maxmemorybytes']      = ( j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+                                                 * j['most_recent_message']['hits']['hits'][0]['fields']['bytes_per_processor'][0] )
+    except:
+      pass
 
   # Now begin building the CRR JSON, as a Python list of dictionaries
     
@@ -229,8 +345,10 @@ def saveCrrJson(siteName, spaceName):
   crrJSON[0]['resourcetype']         = 'vacuum'
 
   crrJSON[0]['numberoflogicalcpus']  = totalProcessors
-  crrJSON[0]['resourcecapacity']     = totalHS06
-  crrJSON[0]['resourcecapacityunit'] = 'HEPSPEC06'
+  
+  if totalHS06 > 0:
+    crrJSON[0]['resourcecapacity']     = totalHS06
+    crrJSON[0]['resourcecapacityunit'] = 'HEPSPEC06'
 
   crrJSON[0]['computingelements']    = { spaceName : { "endpointurl" : spaceName } }
 
@@ -251,11 +369,39 @@ def saveCrrJson(siteName, spaceName):
     crrJSON[0]['jobmanager_version'] = daemonVersion
       
   crrJSON[0]['shares'] = shares
-  
-  os.makedirs('/var/www/vac-crr-json/' + siteName + '/' + spaceName)
 
-  vacmon.vacutils.createFile('/var/www/vac-crr-json/' + siteName + '/' + spaceName + '/crr.json', 
-                             json.dumps(crrJSON), stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/tmp')
+  try:
+    os.makedirs('/var/www/vacjson/' + siteName + '/' + spaceName)
+  except Exception as e:
+    sys.stderr.write(str(e))
+
+  try:
+    vacmon.vacutils.createFile('/var/www/vacjson/' + siteName + '/' + spaceName + '/crr.json', 
+                             json.dumps(crrJSON, indent=2), stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/var/www/tmp')
+  except Exception as e:
+    sys.stderr.write(str(e))
+
+def showCrrJson(siteName, spaceName):
+
+  try:
+    # Try to create and cache the CRR JSON for this space
+    saveCrrJson(siteName, spaceName)
+  except Exception as e:
+    sys.stderr.write(str(e))
+
+  try:
+    # Even if creating the JSON file fails, try to serve up the most recent copy
+    s = open('/var/www/vacjson/' + siteName + '/' + spaceName + '/crr.json', 'r').read()
+  except:
+    print 'Status: 404 Not Found'
+    print 'Location: http://vacjson.gridpp.ac.uk/'
+    print
+  else:
+    print 'Status: 200 OK'
+    print 'Content-Type: application/json'
+    print
+    print s
+    
 #
 # PROGRAM MAIN
 #
@@ -270,24 +416,25 @@ if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghi
   print
   sys.exit(0)
 
-siteName, spaceName = (requestURI + '//').split('/')[1:3]
+siteName, spaceName, fileName = (requestURI + '////').split('/')[1:4]
 
-# Static pages: main page and documentation
-
-if not siteName or not spaceName:
-  htmlHeader('VacJson', selector=False)
-
-  try:
-    print open('/var/www/vacmon/vacjson-index.html', 'r').read()
-  except:
-    pass  
-
-  htmlFooter()
+if not siteName:
+  # List of sites
+  listSites()
   sys.exit(0)
 
-try:
-  saveCrrJson(siteName, spaceName)
-except Exception as e:
-  print str(e)
+if not spaceName:
+  # List of spaces in a site
+  listSpaces(siteName)
+  sys.exit(0)
 
+if fileName == 'crr.json':
+  # CRR for one space at a site
+  showCrrJson(siteName, spaceName)
+  sys.exit(0)
+
+# Something not right
+print 'Status: 302 Found 0'
+print 'Location: http://vacjson.gridpp.ac.uk/'
+print
 sys.exit(0)

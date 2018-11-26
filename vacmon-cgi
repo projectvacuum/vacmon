@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-#  viabmon-cgi - Vacmon CGI script
+#  vacmon-cgi - Vacmon CGI script
 #
 #  Andrew McNab, University of Manchester.
 #  Copyright (c) 2015-8. All rights reserved.
@@ -53,7 +53,7 @@ import pprint
 import vacmon
 
 esDebug   = False
-esTimeout = 60
+esTimeout = 120
 
 # On the all sites page, we ignore these "sites" which are due to initial testing
 sitesIgnoreList = [ 'gridpp.ac.uk', 'lhcb.cern.ch', 'tier2.hep.manchester.ac.uk' ]

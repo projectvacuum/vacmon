@@ -8,6 +8,8 @@ Install the python-pip RPM then
 pip install pygal
 pip install elasticsearch
 
+echo 'export ES_HEAP_SIZE=20g' >>/etc/sysconfig/elasticsearch
+
 systemctl enable elasticsearch.service
 systemctl start elasticsearch.service
 systemctl enable httpd.service

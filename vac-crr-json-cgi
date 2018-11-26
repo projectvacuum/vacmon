@@ -1,0 +1,293 @@
+#!/usr/bin/python
+#
+#  vac-crr-json-cgi - Vac CRR JSON CGI script
+#
+#  Andrew McNab, University of Manchester.
+#  Copyright (c) 2015-8. All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or
+#  without modification, are permitted provided that the following
+#  conditions are met:
+#
+#    o Redistributions of source code must retain the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer. 
+#    o Redistributions in binary form must reproduce the above
+#      copyright notice, this list of conditions and the following
+#      disclaimer in the documentation and/or other materials
+#      provided with the distribution. 
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+#  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+#  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+#  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+#  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+#  BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+#  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+#  TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+#  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+#  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+#  OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+#  Contacts: Andrew.McNab@cern.ch  http://www.gridpp.ac.uk/vacproject/
+#
+
+# First module installed with:
+#
+# pip install elasticsearch
+#
+import elasticsearch
+
+import os
+import cgi
+import sys
+import time
+import json
+import string
+import pprint
+
+import vacmon
+
+esDebug   = True
+esTimeout = 120
+
+def htmlHeader(title, selector=True):
+  print 'Status: 200 OK'
+  print 'Content-Type: text/html'
+  print
+  print '<html><head><title>' + title + '</title>'
+
+  print open('/var/www/vacmon/header.html', 'r').read()
+
+def htmlFooter():
+  print open('/var/www/vacmon/footer.html', 'r').read()
+  print '</html>'
+
+def saveCrrJson(siteName, spaceName):
+
+  timeSpan = 86400
+
+  es = elasticsearch.Elasticsearch(timeout = esTimeout)
+  
+  factoriesSearch =  """
+{
+  "query": 
+    {
+      "bool":
+        {
+          "filter":
+            [
+              { "range": { "time_received": { "from": %ld } } },
+              { "match": { "site": "%s" } },
+              { "match": { "space": "%s" } }
+            ]
+        }
+    },
+
+  "aggs": 
+    {
+      "factories":
+        {
+          "terms":
+            {
+              "field": "factory",
+              "size" : 99999,
+              "order" : { "_term" : "asc" }
+            },
+          "aggs": 
+            { 
+              "most_recent_message": 
+                { 
+                  "top_hits": 
+                    { 
+                      "size" : 1,
+                      "sort" : [ { "time_received": { "order": "desc" } } ],
+                      "docvalue_fields" : [ "time_received", "max_processors", "max_hs06", "mem_total_kb", "daemon_version" ]
+                    }
+                } 
+            }
+        }
+    }    
+}
+""" % (int(time.time()) - timeSpan, siteName, spaceName)
+
+  fs = es.search(
+          index       = 'factories',
+          size        = 0,
+          body        = factoriesSearch)
+
+  print '<!-- fs took %d -->' % fs['took']
+
+  if esDebug:
+      print '<pre>'
+      pprint.pprint(json.loads(factoriesSearch))
+      print
+      pprint.pprint(fs)
+      print '</pre>'
+
+  es = elasticsearch.Elasticsearch(timeout = esTimeout)
+  
+  machinetypesSearch =  """
+{
+  "query": 
+    {
+      "bool":
+        {
+          "filter":
+            [
+              { "range": { "time_received": { "from": %ld } } },
+              { "match": { "site": "%s" } },
+              { "match": { "space": "%s" } }
+            ]
+        }
+    },
+
+  "aggs": 
+    {
+      "machinetypes":
+        {
+          "terms":
+            {
+              "field": "machinetype",
+              "size" : 99999,
+              "order" : { "_term" : "asc" }
+            },
+          "aggs": 
+            { 
+              "most_recent_message": 
+                { 
+                  "top_hits": 
+                    { 
+                      "size" : 1,
+                      "sort" : [ { "time_received": { "order": "desc" } } ],
+                      "docvalue_fields" : [ "time_received", "max_processors", "max_wallclock_seconds", "bytes_per_processor", "fqan", "factory" ]
+                    }
+                } 
+            }
+        }
+    }    
+}
+""" % (int(time.time()) - timeSpan, siteName, spaceName)
+
+  ms = es.search(
+          index       = 'machinetypes',
+          size        = 0,
+          body        = machinetypesSearch)
+
+  print '<!-- ms took %d -->' % fs['took']
+
+  if esDebug:
+      print '<pre>'
+      pprint.pprint(json.loads(machinetypesSearch))
+      print
+      pprint.pprint(ms)
+      print '</pre>'
+
+  # Now assemble info for the CRR JSON
+
+  totalHS06       = 0
+  totalProcessors = 0 
+
+  daemonVersion   = '?'
+  timeReceived    = 0
+
+  for j in fs['aggregations']['factories']['buckets']:
+    if j['most_recent_message']['hits']['hits'][0]['fields']['time_received'][0] > timeReceived:
+      daemonVersion = str(j['most_recent_message']['hits']['hits'][0]['fields']['daemon_version'][0])
+      timeReceived  = j['most_recent_message']['hits']['hits'][0]['fields']['time_received'][0]
+
+    totalHS06       += j['most_recent_message']['hits']['hits'][0]['fields']['max_hs06'][0]
+    totalProcessors += j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+
+  # Shares (queues) from machinetypes
+  
+  shares = {}
+  
+  for j in ms['aggregations']['machinetypes']['buckets']:    
+    shareName               = str(j['key'])
+    shares[shareName]       = {}        
+
+    try:
+      shares[shareName]['vo'] = [ str(j['most_recent_message']['hits']['hits'][0]['fields']['fqan'][0]).split('/')[1] ]
+    except:
+      pass
+    
+    shares[shareName]['maxwallclockseconds'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] 
+    shares[shareName]['maxmemorybytes']      = ( j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+                                               * j['most_recent_message']['hits']['hits'][0]['fields']['bytes_per_processor'][0] )
+
+  # Now begin building the CRR JSON, as a Python list of dictionaries
+    
+  crrJSON = [{}]  
+
+  crrJSON[0]['publication_time']     = int(time.time())
+
+  crrJSON[0]['sitename']             = siteName
+  crrJSON[0]['resourcename']         = spaceName
+  crrJSON[0]['resourcetype']         = 'vacuum'
+
+  crrJSON[0]['numberoflogicalcpus']  = totalProcessors
+  crrJSON[0]['resourcecapacity']     = totalHS06
+  crrJSON[0]['resourcecapacityunit'] = 'HEPSPEC06'
+
+  crrJSON[0]['computingelements']    = { spaceName : { "endpointurl" : spaceName } }
+
+  if daemonVersion.startswith('Vac '):  
+    crrJSON[0]['computingelements'][spaceName]['cetype'] = 'uk.ac.gridpp.vac'
+    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion.split()[1]
+    crrJSON[0]['jobmanager']         = 'Vac'
+    crrJSON[0]['jobmanager_version'] = daemonVersion.split()[1]
+  elif daemonVersion.startswith('Vcycle '):  
+    crrJSON[0]['computingelements'][spaceName]['cetype']  = 'uk.ac.gridpp.vcycle'
+    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion.split()[1]
+    crrJSON[0]['jobmanager']         = 'Vcycle'
+    crrJSON[0]['jobmanager_version'] = daemonVersion.split()[1]
+  else:
+    crrJSON[0]['computingelements'][spaceName]['cetype']  = daemonVersion.split()[0]
+    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion
+    crrJSON[0]['jobmanager']         = daemonVersion.split()[0]
+    crrJSON[0]['jobmanager_version'] = daemonVersion
+      
+  crrJSON[0]['shares'] = shares
+  
+  os.makedirs('/var/www/vac-crr-json/' + siteName + '/' + spaceName)
+
+  vacmon.vacutils.createFile('/var/www/vac-crr-json/' + siteName + '/' + spaceName + '/crr.json', 
+                             json.dumps(crrJSON), stat.S_IWUSR + stat.S_IRUSR + stat.S_IRGRP + stat.S_IROTH, '/tmp')
+#
+# PROGRAM MAIN
+#
+
+vacjsonVersion = open('/var/www/vacmon/VERSION','r').readline().split('=',1)[1].strip()
+requestURI     = os.environ['REQUEST_URI']
+
+if '..' in requestURI or string.translate(requestURI, None, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-./') != '':
+  # Redirect to main page if unacceptable characters in URI
+  print 'Status: 302 Found 0'
+  print 'Location: http://vacjson.gridpp.ac.uk/'
+  print
+  sys.exit(0)
+
+siteName, spaceName = (requestURI + '//').split('/')[1:3]
+
+# Static pages: main page and documentation
+
+if not siteName or not spaceName:
+  htmlHeader('VacJson', selector=False)
+
+  try:
+    print open('/var/www/vacmon/vacjson-index.html', 'r').read()
+  except:
+    pass  
+
+  htmlFooter()
+  sys.exit(0)
+
+try:
+  saveCrrJson(siteName, spaceName)
+except Exception as e:
+  print str(e)
+
+sys.exit(0)

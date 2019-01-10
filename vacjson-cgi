@@ -347,7 +347,7 @@ def saveCrrJson(siteName, spaceName):
   crrJSON[0]['numberoflogicalcpus']  = totalProcessors
   
   if totalHS06 > 0:
-    crrJSON[0]['resourcecapacity']     = totalHS06
+    crrJSON[0]['resourcecapacity']     = int(totalHS06)
     crrJSON[0]['resourcecapacityunit'] = 'HEPSPEC06'
 
   crrJSON[0]['computingelements']    = { spaceName : { "endpointurl" : spaceName } }

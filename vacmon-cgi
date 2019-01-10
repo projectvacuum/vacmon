@@ -1312,7 +1312,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
+#    chart.add('Max processors',  maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # Machines running at this site
@@ -1339,7 +1339,7 @@ def oneSite(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO, 
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+#    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running machines by VO
@@ -1669,7 +1669,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                       fill=True, 
                       show_dots=False)
 
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+#    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
     
     # Machines running at all sites
@@ -1697,7 +1697,7 @@ def allSites(imageSize, timeSpan, timeEnd, timeBuckets, voName, sizeTimeRangeVO)
                    fill=True, 
                    show_dots=False )
 
-    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
+#    chart.add('Max processors', maxProcValues, fill=False, show_dots=False)
     chart.htmlPrint()
 
     # Running machines by VO at all sites

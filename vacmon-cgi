@@ -197,7 +197,7 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
   print '</select><select name="dateFrom_year">'
   
   thisYear = int(datetime.datetime.utcnow().year)  
-  for i in xrange(thisYear - 1, thisYear+1):
+  for i in xrange(thisYear - 1, thisYear + 1):
     print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeStart.tm_year else '', i)
     
   print '</select>'
@@ -216,7 +216,7 @@ def htmlSelector(imageSize, timeSpan, timeEnd, voName, uriTail):
     print '<option value="%d"%s>%s' % (i, ' selected' if i == structTimeEnd.tm_mon else '', months[i])
 
   print '</select><select name="dateTo_year">'
-  for i in xrange(2016,2019):
+  for i in xrange(thisYear -1 , thisYear + 1):
     print '<option value="%d"%s>%d' % (i, ' selected' if i == structTimeEnd.tm_year else '', i)
     
   print '</select>'

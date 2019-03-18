@@ -3,7 +3,7 @@
 #  vacjson-cgi - Vac CRR JSON CGI script
 #
 #  Andrew McNab, University of Manchester.
-#  Copyright (c) 2015-8. All rights reserved.
+#  Copyright (c) 2015-9. All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or
 #  without modification, are permitted provided that the following
@@ -316,64 +316,60 @@ def saveCrrJson(siteName, spaceName):
   
   for j in ms['aggregations']['machinetypes']['buckets']:    
     shareName               = str(j['key'])
-    shares[shareName]       = {}        
+    shares[shareName]       = { 'type' : 'machinetype' }
 
     try:
-      shares[shareName]['vo'] = [ str(j['most_recent_message']['hits']['hits'][0]['fields']['fqan'][0]).split('/')[1] ]
+      shares[shareName]['assigned_vos'] = [ str(j['most_recent_message']['hits']['hits'][0]['fields']['fqan'][0]).split('/')[1] ]
     except:
       pass
     
     try:
-      shares[shareName]['maxwallclockseconds'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] 
+      shares[shareName]['max_wall_minutess'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] / 60
     except:
       pass
       
     try:
-      shares[shareName]['maxmemorybytes']      = ( j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
-                                                 * j['most_recent_message']['hits']['hits'][0]['fields']['bytes_per_processor'][0] )
+      # GB = 10^9 bytes; not GB = 1024^3. Is this what we want???
+      shares[shareName]['max_main_memory_GB'] = ( j['most_recent_message']['hits']['hits'][0]['fields']['max_processors'][0]
+                                                  * j['most_recent_message']['hits']['hits'][0]['fields']['bytes_per_processor'][0] ) / 1000000000
     except:
       pass
 
-  # Now begin building the CRR JSON, as a Python list of dictionaries
-    
-  crrJSON = [{}]  
+  # Now begin building the JSON for one space ("resource"), as a Python dictionary
 
-  crrJSON[0]['publication_time']     = int(time.time())
+  resJSON = { 'publication_time': int(time.time()) }
 
-  crrJSON[0]['sitename']             = siteName
-  crrJSON[0]['resourcename']         = spaceName
-  crrJSON[0]['resourcetype']         = 'vacuum'
-
-  crrJSON[0]['numberoflogicalcpus']  = totalProcessors
+  resJSON['shares']               = shares
+  #        vvvv captial S???
+  resJSON['Site']                 = siteName
+  resJSON['type']                 = 'vacuum'
+  resJSON['status']               = 'production'
+  resJSON['number_logical_cpus']  = totalProcessors
   
   if totalHS06 > 0:
-    crrJSON[0]['resourcecapacity']     = int(totalHS06)
-    crrJSON[0]['resourcecapacityunit'] = 'HEPSPEC06'
+    resJSON['capacity_HS06']      = int(totalHS06)
 
-  crrJSON[0]['computingelements']    = { spaceName : { "endpointurl" : spaceName } }
+  resJSON['accesspoints']         = { spaceName : { "endpoint_urls" : [ spaceName ] } }
 
   if daemonVersion.startswith('Vac '):  
-    crrJSON[0]['computingelements'][spaceName]['cetype'] = 'uk.ac.gridpp.vac'
-    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion.split()[1]
-    crrJSON[0]['jobmanager']         = 'Vac'
-    crrJSON[0]['jobmanager_version'] = daemonVersion.split()[1]
+    resJSON['accesspoints'][spaceName]['flavour'] = 'uk.ac.gridpp.vac'
+    resJSON['accesspoints'][spaceName]['version'] = daemonVersion.split()[1]
   elif daemonVersion.startswith('Vcycle '):  
-    crrJSON[0]['computingelements'][spaceName]['cetype']  = 'uk.ac.gridpp.vcycle'
-    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion.split()[1]
-    crrJSON[0]['jobmanager']         = 'Vcycle'
-    crrJSON[0]['jobmanager_version'] = daemonVersion.split()[1]
+    resJSON['accesspoints'][spaceName]['flavour'] = 'uk.ac.gridpp.vcycle'
+    resJSON['accesspoints'][spaceName]['version'] = daemonVersion.split()[1]
   else:
-    crrJSON[0]['computingelements'][spaceName]['cetype']  = daemonVersion.split()[0]
-    crrJSON[0]['computingelements'][spaceName]['version'] = daemonVersion
-    crrJSON[0]['jobmanager']         = daemonVersion.split()[0]
-    crrJSON[0]['jobmanager_version'] = daemonVersion
+    resJSON['accesspoints'][spaceName]['flavour'] = daemonVersion.split()[0]
+    resJSON['accesspoints'][spaceName]['version'] = daemonVersion
       
-  crrJSON[0]['shares'] = shares
+  resJSON['jobmanager']         = resJSON['accesspoints'][spaceName]['flavour']
+  resJSON['jobmanager_version'] = resJSON['accesspoints'][spaceName]['version']
 
   try:
     os.makedirs('/var/www/vacjson/' + siteName + '/' + spaceName)
   except Exception as e:
     sys.stderr.write(str(e))
+
+  crrJSON = { "computingresources" : { spaceName : resJSON } }
 
   try:
     vacmon.vacutils.createFile('/var/www/vacjson/' + siteName + '/' + spaceName + '/crr.json', 

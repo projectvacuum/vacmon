@@ -324,7 +324,7 @@ def saveCrrJson(siteName, spaceName):
       pass
     
     try:
-      shares[shareName]['max_wall_minutess'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] / 60
+      shares[shareName]['max_walltime_minutes'] = j['most_recent_message']['hits']['hits'][0]['fields']['max_wallclock_seconds'][0] / 60
     except:
       pass
       
@@ -341,7 +341,7 @@ def saveCrrJson(siteName, spaceName):
 
   resJSON['shares']               = shares
   #        vvvv captial S???
-  resJSON['Site']                 = siteName
+  resJSON['site']                 = siteName
   resJSON['type']                 = 'vacuum'
   resJSON['status']               = 'production'
   resJSON['number_logical_cpus']  = totalProcessors
